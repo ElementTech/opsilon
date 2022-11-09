@@ -14,7 +14,7 @@ A general purpose project template for golang CLI applications
 
 <!--te-->
 
-[![Test](https://github.com/amitai-devops/gitform/actions/workflows/test.yml/badge.svg)](https://github.com/amitai-devops/gitform/actions/workflows/test.yml) [![golangci-lint](https://github.com/amitai-devops/gitform/actions/workflows/lint.yml/badge.svg)](https://github.com/amitai-devops/gitform/actions/workflows/lint.yml) [![Go Report Card](https://goreportcard.com/badge/github.com/amitai-devops/gitform)](https://goreportcard.com/report/github.com/amitai-devops/gitform) [![Go Reference](https://pkg.go.dev/badge/github.com/amitai-devops/gitform.svg)](https://pkg.go.dev/github.com/amitai-devops/gitform) [![codecov](https://codecov.io/gh/amitai-devops/gitform/branch/main/graph/badge.svg?token=Y5K4SID71F)](https://codecov.io/gh/amitai-devops/gitform)
+[![Test](https://github.com/jatalocks/gitform/actions/workflows/test.yml/badge.svg)](https://github.com/jatalocks/gitform/actions/workflows/test.yml) [![golangci-lint](https://github.com/jatalocks/gitform/actions/workflows/lint.yml/badge.svg)](https://github.com/jatalocks/gitform/actions/workflows/lint.yml) [![Go Report Card](https://goreportcard.com/badge/github.com/jatalocks/gitform)](https://goreportcard.com/report/github.com/jatalocks/gitform) [![Go Reference](https://pkg.go.dev/badge/github.com/jatalocks/gitform.svg)](https://pkg.go.dev/github.com/jatalocks/gitform) [![codecov](https://codecov.io/gh/jatalocks/gitform/branch/main/graph/badge.svg?token=Y5K4SID71F)](https://codecov.io/gh/jatalocks/gitform)
 
 This template serves as a starting point for golang commandline applications it is based on golang projects that I consider high quality and various other useful blog posts that helped me understanding golang better.
 
@@ -29,16 +29,16 @@ This template serves as a starting point for golang commandline applications it 
 - [pre-commit-hooks](https://pre-commit.com/) for formatting and validating code before committing
 
 # Project Layout
-* [assets/](https://pkg.go.dev/github.com/amitai-devops/gitform/assets) => docs, images, etc
-* [cmd/](https://pkg.go.dev/github.com/amitai-devops/gitform/cmd)  => commandline configurartions (flags, subcommands)
-* [pkg/](https://pkg.go.dev/github.com/amitai-devops/gitform/pkg)  => packages that are okay to import for other projects
-* [internal/](https://pkg.go.dev/github.com/amitai-devops/gitform/pkg)  => packages that are only for project internal purposes
+* [assets/](https://pkg.go.dev/github.com/jatalocks/gitform/assets) => docs, images, etc
+* [cmd/](https://pkg.go.dev/github.com/jatalocks/gitform/cmd)  => commandline configurartions (flags, subcommands)
+* [pkg/](https://pkg.go.dev/github.com/jatalocks/gitform/pkg)  => packages that are okay to import for other projects
+* [internal/](https://pkg.go.dev/github.com/jatalocks/gitform/pkg)  => packages that are only for project internal purposes
 - [`tools/`](tools/) => for automatically shipping all required dependencies when running `go get` (or `make bootstrap`) such as `golang-ci-lint` (see: https://github.com/golang/go/wiki/Modules#how-can-i-track-tool-dependencies-for-a-module)
 )
 
 # How to use this template
 ```sh
-bash <(curl -s https://raw.githubusercontent.com/amitai-devops/gitform/main/install.sh)
+bash <(curl -s https://raw.githubusercontent.com/jatalocks/gitform/main/install.sh)
 ```
 
 # Demo Application

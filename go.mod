@@ -1,4 +1,4 @@
-module github.com/amitai-devops/gitform
+module github.com/jatalocks/gitform
 
 go 1.19
 

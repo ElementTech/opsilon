@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/amitai-devops/gitform/cmd"
+	"github.com/jatalocks/gitform/cmd"
 )
 
 var version = ""

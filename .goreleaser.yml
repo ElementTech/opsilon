@@ -32,7 +32,7 @@ archives:
 nfpms:
   -
     vendor: gitform
-    homepage:  https://github.com/amitai-devops/gitform
+    homepage:  https://github.com/jatalocks/gitform
     maintainer: "Tom Morelly <tom-morelly@gmx.de"
     description: "A general purpose golang CLI template for Github and Gitlab"
     license: GPL-3.0
