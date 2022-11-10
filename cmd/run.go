@@ -3,7 +3,8 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/jatalocks/opsilon/pkg/push"
+	"github.com/jatalocks/opsilon/pkg/run"
+
 	"github.com/spf13/cobra"
 )
 
@@ -42,7 +43,7 @@ func (o *pushOptions) run(cmd *cobra.Command, args []string) error {
 	}
 
 	if o.file {
-		fmt.Fprintf(cmd.OutOrStdout(), "%d\n", push.Create(values[0]))
+		fmt.Fprintf(cmd.OutOrStdout(), "%d\n", run.Create(values[0]))
 	}
 
 	return nil
