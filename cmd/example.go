@@ -3,8 +3,8 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/jatalocks/gitform/internal/convert"
-	"github.com/jatalocks/gitform/pkg/example"
+	"github.com/jatalocks/opsilon/internal/convert"
+	"github.com/jatalocks/opsilon/pkg/example"
 	"github.com/spf13/cobra"
 )
 

@@ -1,8 +1,8 @@
-# gitform
+# opsilon
 A general purpose project template for golang CLI applications
 
 <!--ts-->
-   * [gitform](#gitform)
+   * [opsilon](#opsilon)
    * [Features](#features)
    * [Project Layout](#project-layout)
    * [How to use this template](#how-to-use-this-template)
@@ -14,7 +14,7 @@ A general purpose project template for golang CLI applications
 
 <!--te-->
 
-[![Test](https://github.com/jatalocks/gitform/actions/workflows/test.yml/badge.svg)](https://github.com/jatalocks/gitform/actions/workflows/test.yml) [![golangci-lint](https://github.com/jatalocks/gitform/actions/workflows/lint.yml/badge.svg)](https://github.com/jatalocks/gitform/actions/workflows/lint.yml) [![Go Report Card](https://goreportcard.com/badge/github.com/jatalocks/gitform)](https://goreportcard.com/report/github.com/jatalocks/gitform) [![Go Reference](https://pkg.go.dev/badge/github.com/jatalocks/gitform.svg)](https://pkg.go.dev/github.com/jatalocks/gitform) [![codecov](https://codecov.io/gh/jatalocks/gitform/branch/main/graph/badge.svg?token=Y5K4SID71F)](https://codecov.io/gh/jatalocks/gitform)
+[![Test](https://github.com/jatalocks/opsilon/actions/workflows/test.yml/badge.svg)](https://github.com/jatalocks/opsilon/actions/workflows/test.yml) [![golangci-lint](https://github.com/jatalocks/opsilon/actions/workflows/lint.yml/badge.svg)](https://github.com/jatalocks/opsilon/actions/workflows/lint.yml) [![Go Report Card](https://goreportcard.com/badge/github.com/jatalocks/opsilon)](https://goreportcard.com/report/github.com/jatalocks/opsilon) [![Go Reference](https://pkg.go.dev/badge/github.com/jatalocks/opsilon.svg)](https://pkg.go.dev/github.com/jatalocks/opsilon) [![codecov](https://codecov.io/gh/jatalocks/opsilon/branch/main/graph/badge.svg?token=Y5K4SID71F)](https://codecov.io/gh/jatalocks/opsilon)
 
 This template serves as a starting point for golang commandline applications it is based on golang projects that I consider high quality and various other useful blog posts that helped me understanding golang better.
 
@@ -25,31 +25,31 @@ This template serves as a starting point for golang commandline applications it 
 - [Gitlab CI](.gitlab-ci.yml) Configuration (Lint, Test, Build, Release)
 - [cobra](https://cobra.dev/) example setup including tests
 - [Makefile](Makefile) - with various useful targets and documentation (see Makefile Targets)
-- [Github Pages](_config.yml) using [jekyll-theme-minimal](https://github.com/pages-themes/minimal) (checkout [https://falcosuessgott.github.io/gitform/](https://falcosuessgott.github.io/gitform/))
+- [Github Pages](_config.yml) using [jekyll-theme-minimal](https://github.com/pages-themes/minimal) (checkout [https://falcosuessgott.github.io/opsilon/](https://falcosuessgott.github.io/opsilon/))
 - [pre-commit-hooks](https://pre-commit.com/) for formatting and validating code before committing
 
 # Project Layout
-* [assets/](https://pkg.go.dev/github.com/jatalocks/gitform/assets) => docs, images, etc
-* [cmd/](https://pkg.go.dev/github.com/jatalocks/gitform/cmd)  => commandline configurartions (flags, subcommands)
-* [pkg/](https://pkg.go.dev/github.com/jatalocks/gitform/pkg)  => packages that are okay to import for other projects
-* [internal/](https://pkg.go.dev/github.com/jatalocks/gitform/pkg)  => packages that are only for project internal purposes
+* [assets/](https://pkg.go.dev/github.com/jatalocks/opsilon/assets) => docs, images, etc
+* [cmd/](https://pkg.go.dev/github.com/jatalocks/opsilon/cmd)  => commandline configurartions (flags, subcommands)
+* [pkg/](https://pkg.go.dev/github.com/jatalocks/opsilon/pkg)  => packages that are okay to import for other projects
+* [internal/](https://pkg.go.dev/github.com/jatalocks/opsilon/pkg)  => packages that are only for project internal purposes
 - [`tools/`](tools/) => for automatically shipping all required dependencies when running `go get` (or `make bootstrap`) such as `golang-ci-lint` (see: https://github.com/golang/go/wiki/Modules#how-can-i-track-tool-dependencies-for-a-module)
 )
 
 # How to use this template
 ```sh
-bash <(curl -s https://raw.githubusercontent.com/jatalocks/gitform/main/install.sh)
+bash <(curl -s https://raw.githubusercontent.com/jatalocks/opsilon/main/install.sh)
 ```
 
 # Demo Application
 
 ```sh
-$> gitform
+$> opsilon
 golang-cli project template demo application
 
 Usage:
-  gitform [flags]
-  gitform [command]
+  opsilon [flags]
+  opsilon [command]
 
 Available Commands:
   example     example subcommand which adds or multiplies two given integers
@@ -57,16 +57,16 @@ Available Commands:
   version     Displays d4sva binary version
 
 Flags:
-  -h, --help   help for gitform
+  -h, --help   help for opsilon
 
-Use "gitform [command] --help" for more information about a command.
+Use "opsilon [command] --help" for more information about a command.
 ```
 
 ```sh
-$> gitform example 2 5 --add
+$> opsilon example 2 5 --add
 7
 
-$> gitform example 2 5 --multiply
+$> opsilon example 2 5 --multiply
 10
 ```
 

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/jatalocks/gitform/cmd"
+	"github.com/jatalocks/opsilon/cmd"
 )
 
 var version = ""

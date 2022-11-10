@@ -3,7 +3,7 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/jatalocks/gitform/pkg/push"
+	"github.com/jatalocks/opsilon/pkg/push"
 	"github.com/spf13/cobra"
 )
 

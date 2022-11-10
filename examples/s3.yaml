@@ -1,1 +1,2 @@
-name: test-gitform
+name: test-opsilon
+objectLockEnabledForBucket: false

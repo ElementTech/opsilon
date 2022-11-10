@@ -8,7 +8,7 @@ before:
 
 builds:
   -
-    binary: gitform
+    binary: opsilon
     ldflags: -s -w -X main.version={{ .Version }}
     goos:
       - linux
@@ -20,7 +20,7 @@ builds:
 archives:
   -
     builds:
-      - gitform
+      - opsilon
     format_overrides:
       - goos: windows
         format: zip
@@ -31,8 +31,8 @@ archives:
 
 nfpms:
   -
-    vendor: gitform
-    homepage:  https://github.com/jatalocks/gitform
+    vendor: opsilon
+    homepage:  https://github.com/jatalocks/opsilon
     maintainer: "Tom Morelly <tom-morelly@gmx.de"
     description: "A general purpose golang CLI template for Github and Gitlab"
     license: GPL-3.0

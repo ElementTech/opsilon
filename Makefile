@@ -1,4 +1,4 @@
-projectname?=gitform
+projectname?=opsilon
 
 default: help
 

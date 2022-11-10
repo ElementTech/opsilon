@@ -8,7 +8,7 @@ import (
 
 func newRootCmd(version string) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "gitform",
+		Use:   "opsilon",
 		Short: "golang-cli project template demo application",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			fmt.Println(cmd.UsageString())
@@ -20,6 +20,8 @@ func newRootCmd(version string) *cobra.Command {
 	cmd.AddCommand(newVersionCmd(version)) // version subcommand
 	cmd.AddCommand(newExampleCmd())        // example subcommand
 	cmd.AddCommand(newPushCmd())           // example subcommand
+	cmd.AddCommand(newPullCmd())           // example subcommand
+	cmd.AddCommand(newDestroyCmd())        // example subcommand
 
 	return cmd
 }

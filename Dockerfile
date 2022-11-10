@@ -8,6 +8,6 @@ RUN go mod download
 
 COPY . .
 
-RUN go build -ldflags "-s -w -X main.version=1.0.0" -o gitform
+RUN go build -ldflags "-s -w -X main.version=1.0.0" -o opsilon
 
-CMD [ "./gitform" ]
+CMD [ "./opsilon" ]

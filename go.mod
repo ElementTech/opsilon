@@ -1,4 +1,4 @@
-module github.com/jatalocks/gitform
+module github.com/jatalocks/opsilon
 
 go 1.19
 

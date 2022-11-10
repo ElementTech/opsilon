@@ -5,11 +5,11 @@ set -euo pipefail
 # read -rp "GitHub Username: " user
 # read -rp "Projectname: " projectname
 user="jatalocks"
-projectname="gitform"
-# git clone git@github.com:jatalocks/gitform.git "$projectname"
+projectname="opsilon"
+# git clone git@github.com:jatalocks/opsilon.git "$projectname"
 # cd "$projectname"
 # rm -rf .git
-find . -type f -exec sed -i '' -e "s/gitform/$projectname/g" {} +
+find . -type f -exec sed -i '' -e "s/opsilon/$projectname/g" {} +
 find . -type f -exec sed -i '' -e "s/jatalocks/$user/g" {} +
 # git init
 # git add .
