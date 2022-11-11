@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 
+	"github.com/jatalocks/opsilon/internal/convert"
 	"github.com/jatalocks/opsilon/pkg/list"
 
 	"github.com/spf13/cobra"
@@ -43,7 +44,7 @@ func (o *listOptions) list(cmd *cobra.Command, args []string) error {
 	}
 
 	if o.file {
-		fmt.Fprintf(cmd.OutOrStdout(), "%d\n", list.List(values[0]))
+		fmt.Fprintf(cmd.OutOrStdout(), "%d\n", convert.PrettyPrint(list.List(values[0])))
 	}
 
 	return nil

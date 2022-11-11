@@ -2,9 +2,14 @@ actions:
   - name: Create namespace
     help: Creates a namespace
     args:
-      - branch: string
-      - namespace: string
+      - name: branch
+        type: string
+        default: main
+      - name: namespace
+        type: string
+        optional: false
   - name: Delete namespace
     help: deletes a namespace
     args:
-      - namespace: string
+      - name: namespace
+        type: string

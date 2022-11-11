@@ -20,6 +20,7 @@ func newRootCmd(version string) *cobra.Command {
 	cmd.AddCommand(newVersionCmd(version)) // version subcommand
 	cmd.AddCommand(newExampleCmd())        // example subcommand
 	cmd.AddCommand(newListCmd())           // example subcommand
+	cmd.AddCommand(newRunCmd())            // example subcommand
 
 	return cmd
 }
