@@ -6,6 +6,21 @@ import (
 	"strconv"
 )
 
+var boolValues = []string{
+	"1",
+	"t",
+	"T",
+	"TRUE",
+	"true",
+	"True",
+	"0",
+	"f",
+	"F",
+	"FALSE",
+	"false",
+	"False",
+}
+
 // nolint: goerr113
 var errConversionError = func(v interface{}) error {
 	return fmt.Errorf("cannot convert value %v (type %T)", v, v)

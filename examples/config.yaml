@@ -1,15 +1,15 @@
 actions:
   - name: Create namespace
+    id: createns
     help: Creates a namespace
     args:
       - name: branch
-        type: string
         default: main
       - name: namespace
-        type: string
-        optional: false
+      - name: test
+        optional: true        
   - name: Delete namespace
+    id: deletens
     help: deletes a namespace
     args:
       - name: namespace
-        type: string

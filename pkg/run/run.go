@@ -2,12 +2,15 @@ package run
 
 import (
 	"fmt"
+	"html/template"
+	"os"
 
+	"github.com/fatih/color"
 	"github.com/jatalocks/opsilon/internal/get"
 	"github.com/manifoldco/promptui"
 )
 
-func Select(file string) string {
+func Select(file string) get.Action {
 	actions := get.Actions(get.List(file))
 
 	templates := &promptui.SelectTemplates{
@@ -28,26 +31,29 @@ func Select(file string) string {
 		Templates: templates,
 	}
 
-	i, result, err := prompt.Run()
+	i, _, err := prompt.Run()
 
 	if err != nil {
 		fmt.Printf("Prompt failed %v\n", err)
 	}
-
-	fmt.Printf("You Chose: %s\n", actions[i].Name)
-	PromptArguments(&actions[i].Args)
-	return result
+	chosenAct := actions[i]
+	cyan := color.New(color.FgCyan).SprintFunc()
+	fmt.Printf("You Chose: %s.\n", cyan(chosenAct.Name))
+	PromptArguments(&chosenAct)
+	get.Confirm(chosenAct)
+	fmt.Println(chosenAct)
+	return chosenAct
 }
 
-func PromptArguments(act *[]get.Argument) {
+func PromptArguments(act *get.Action) {
 
-	argsWithValues := *act
+	argsWithValues := act.Args
 	// Each template displays the data received from the prompt with some formatting.
 	templates := &promptui.PromptTemplates{
-		Prompt:  "{{ .Type | faint }} {{ .Name }} ({{ .Value | faint }}): ",
-		Valid:   "{{ .Type | faint }} {{ .Name | green }} ({{ .Value | faint }}): ",
-		Invalid: "{{ .Type | faint }} {{ .Name | red }} ({{ .Value | faint }}): ",
-		Success: "{{ .Type | faint }} {{ .Name | bold }} ({{ .Value | faint }}): ",
+		Prompt:  "{{ .Name }} ({{ .Value | faint }}): ",
+		Valid:   "{{ .Name | green }} ({{ .Value | faint }}): ",
+		Invalid: "{{ .Name | red }} ({{ .Value | faint }}): ",
+		Success: "{{ .Name | bold }} ({{ .Value | faint }}): ",
 	}
 
 	for i, v := range argsWithValues {
@@ -80,8 +86,16 @@ func PromptArguments(act *[]get.Argument) {
 		argsWithValues[i].Value = result
 		fmt.Printf("%s\n", result)
 	}
-}
+	tmpl := `--------- Running "{{.Name}}" with: ----------
+{{range .Args}}
+{{ .Name }}: {{ .Value }}
+{{end}}
+	`
 
-func Error(s string) {
-	panic("unimplemented")
+	t := template.Must(template.New("tmpl").Parse(tmpl))
+
+	err := t.Execute(os.Stdout, act)
+	if err != nil {
+		fmt.Println("executing template:", err)
+	}
 }

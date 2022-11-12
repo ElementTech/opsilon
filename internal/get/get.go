@@ -1,9 +1,13 @@
 package get
 
 import (
+	"errors"
+	"fmt"
 	"io/ioutil"
 	"log"
+	"strings"
 
+	"github.com/manifoldco/promptui"
 	"gopkg.in/yaml.v2"
 )
 
@@ -14,12 +18,12 @@ type ActionFile struct {
 type Action struct {
 	Name string     `yaml:"name"`
 	Help string     `yaml:"help"`
+	ID   string     `yaml:"id"`
 	Args []Argument `yaml:"args"`
 }
 
 type Argument struct {
 	Name     string `yaml:"name"`
-	Type     string `yaml:"type"`
 	Value    string `yaml:"default"`
 	Optional bool   `yaml:"optional"`
 }
@@ -46,4 +50,28 @@ func List(file string) ActionFile {
 	}
 
 	return data
+}
+
+func Confirm(act Action) (bool, error) {
+	prompt := promptui.Prompt{
+		Label:     fmt.Sprintf("Run %v", act.Name),
+		IsConfirm: true,
+		Default:   "n",
+	}
+	validate := func(s string) error {
+		if len(s) == 1 && strings.Contains("YyNn", s) || prompt.Default != "" && len(s) == 0 {
+			return nil
+		}
+		return errors.New("invalid input")
+	}
+	prompt.Validate = validate
+
+	_, err := prompt.Run()
+	confirmed := !errors.Is(err, promptui.ErrAbort)
+	if err != nil && confirmed {
+		fmt.Println("ERROR: ", err)
+		return false, err
+	}
+
+	return confirmed, nil
 }
