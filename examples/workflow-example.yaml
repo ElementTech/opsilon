@@ -1,0 +1,47 @@
+# ID of job to match an action in the actions file
+id: example
+# Help Description
+description: this is an example workflow which includes all of opsilon capabilities
+
+# Global Docker Image
+image: alpine:latest
+
+# Global Environment Variables
+env:
+  - name: filename
+    value: testValue
+
+input:
+  - name: arg1
+    default: defaultvalue
+  - name: arg2
+  - name: arg3
+    optional: true
+
+stages:
+  - stage: write a file 1
+    image: ubuntu:latest
+    script:
+      # - echo $arg3 > test.txt
+      - sh
+      - -c
+      - echo $arg3
+  #   rules:
+  #     - if: $arg3
+  #       not: ""
+  #   artifacts:
+  #     paths:
+  #       - test.txt
+  # - stage: write a file 2
+  #   image: ubuntu:latest
+  #   script:
+  #     - echo $arg2 > test.txt
+  #   rules:
+  #     - if: $arg3
+  #       equals: ""
+  #   artifacts:
+  #     paths:
+  #       - test.txt
+  # - stage: read the file
+  #   script:
+  #     - cat $testEnv.txt

@@ -1,0 +1,4 @@
+- name: example
+  location:
+    path: /Users/amitai.getzler/Desktop/Explorium/opsilon/examples/workflow-example.yaml
+    type: file

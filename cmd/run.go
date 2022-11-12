@@ -24,7 +24,7 @@ func newRunCmd() *cobra.Command {
 		RunE:         o.run,
 	}
 
-	cmd.Flags().BoolVarP(&o.file, "file", "f", o.file, "path to an actions file")
+	cmd.Flags().BoolVarP(&o.file, "file", "f", o.file, "path to an actions file (override configure)")
 
 	return cmd
 }

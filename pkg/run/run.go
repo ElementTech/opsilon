@@ -7,26 +7,21 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/jatalocks/opsilon/internal/config"
+	"github.com/jatalocks/opsilon/internal/engine"
 	"github.com/jatalocks/opsilon/internal/get"
 	"github.com/manifoldco/promptui"
 )
 
-func Select(file string) get.Action {
-	actions := config.GetConfig(file).Actions
-
+func Select(file string) {
+	actions := config.GetConfig(file)
 	templates := &promptui.SelectTemplates{
 		Label:    "{{ . }}",
-		Active:   "\u25B6\uFE0F {{ .Name | cyan }} ({{ .Help | green }})",
-		Inactive: "  {{ .Name | cyan }} ({{ .Help | yellow }})",
-		Selected: "\u25B6\uFE0F {{ .Name | cyan | cyan }}",
-		Details: `
---------- Action ----------
-{{ "Name:" | faint }}	{{ .Name }}
-{{ "Description:" | faint }}	{{ .Help }}
-{{ "Arguments:" | faint }}	{{block "list" .Args}}{{"\n"}}{{range .}}{{println "-" .Name}}{{end}}{{end}}`,
+		Active:   "\u25B6\uFE0F {{ .Name | cyan }} ({{ .Workflow.Description | green }})",
+		Inactive: "  {{ .Name | cyan }} ({{ .Workflow.Description | yellow }})",
+		Selected: "\u25B6\uFE0F {{ .Name | cyan }}",
 	}
 
-	prompt := promptui.Select{
+	prompt := &promptui.Select{
 		Label:     "Select Action",
 		Items:     actions,
 		Templates: templates,
@@ -39,16 +34,22 @@ func Select(file string) get.Action {
 	}
 	chosenAct := actions[i]
 	cyan := color.New(color.FgCyan).SprintFunc()
-	fmt.Printf("You Chose: %s.\n", cyan(chosenAct.Name))
+	fmt.Printf("You Chose: %s\n", cyan(chosenAct.Name))
 	PromptArguments(&chosenAct)
-	get.Confirm(chosenAct)
-	fmt.Println(chosenAct)
-	return chosenAct
+	toRun, err := get.Confirm(chosenAct)
+	if err != nil {
+		fmt.Printf("Prompt failed %v\n", err)
+	}
+	if toRun {
+		engine.Engine(chosenAct.Workflow)
+	} else {
+		fmt.Println("Run Canceled")
+	}
 }
 
 func PromptArguments(act *get.Action) {
 
-	argsWithValues := act.Args
+	argsWithValues := act.Workflow.Input
 	// Each template displays the data received from the prompt with some formatting.
 	templates := &promptui.PromptTemplates{
 		Prompt:  "{{ .Name }} ({{ .Value | faint }}): ",
@@ -88,7 +89,7 @@ func PromptArguments(act *get.Action) {
 		fmt.Printf("%s\n", result)
 	}
 	tmpl := `--------- Running "{{.Name}}" with: ----------
-{{range .Args}}
+{{range .Workflow.Input}}
 {{ .Name }}: {{ .Value }}
 {{end}}
 	`

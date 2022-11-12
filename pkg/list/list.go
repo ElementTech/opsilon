@@ -9,12 +9,13 @@ import (
 )
 
 func List(file string) {
-	actions := config.GetConfig(file).Actions
+	actions := config.GetConfig(file)
 
 	tmpl := `{{range .}}--------- {{.Name}} ----------
-{{.Help}}
-{{range .Args}}
-- {{.Name}}{{end}}
+Description: 
+	{{.Workflow.Description}}
+Input: {{range .Workflow.Input}}
+	- {{.Name}} {{ if .Value}}({{.Value}}){{end}}{{end}}
 {{end}}`
 
 	t := template.Must(template.New("tmpl").Parse(tmpl))

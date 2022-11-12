@@ -2,9 +2,11 @@ package config
 
 import (
 	"errors"
+	"fmt"
 	"log"
 	"os"
 
+	"github.com/fatih/color"
 	"github.com/jatalocks/opsilon/internal/get"
 )
 
@@ -19,14 +21,21 @@ func ConfigExists() bool {
 	return true
 }
 
-func GetConfig(f string) get.ActionFile {
+func GetConfig(f string) []get.Action {
 	if f == "" {
-		dirname, err := os.UserHomeDir()
-		if err != nil {
-			log.Fatal(err)
+		if ConfigExists() {
+			dirname, err := os.UserHomeDir()
+			if err != nil {
+				log.Fatal(err)
+			}
+			return get.List(dirname + "/" + ".opsilon" + "/opsilon.yaml")
+		} else {
+			cyan := color.New(color.FgCyan).SprintFunc()
+			bold := color.New(color.Bold).SprintFunc()
+			fmt.Printf("%s Please run %s or pass a file using %s", bold("No opsilon configuration exists."), cyan("opsilon configure"), cyan("-f/--file"))
 		}
-		return get.List(dirname + "/" + ".opsilon" + "/opsilon.yaml")
 	} else {
 		return get.List(f)
 	}
+	return []get.Action{}
 }

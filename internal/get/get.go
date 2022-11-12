@@ -7,32 +7,43 @@ import (
 	"log"
 	"strings"
 
+	"github.com/jatalocks/opsilon/internal/engine"
 	"github.com/manifoldco/promptui"
 	"gopkg.in/yaml.v2"
 )
 
-type ActionFile struct {
-	Actions []Action `yaml:"actions"`
+type Location struct {
+	Path string `yaml:"path"`
+	Type string `yaml:"type"`
 }
 
 type Action struct {
-	Name string     `yaml:"name"`
-	Help string     `yaml:"help"`
-	ID   string     `yaml:"id"`
-	Args []Argument `yaml:"args"`
+	Name     string          `yaml:"name"`
+	Location Location        `yaml:"location"`
+	Workflow engine.Workflow `yaml:"workflow,omitempty"`
 }
 
-type Argument struct {
-	Name     string `yaml:"name"`
-	Value    string `yaml:"default"`
-	Optional bool   `yaml:"optional"`
+func getWorkflow(location Location) *engine.Workflow {
+	if location.Type == "file" {
+		yfile, err := ioutil.ReadFile(location.Path)
+
+		if err != nil {
+
+			log.Fatal(err)
+		}
+		data := engine.Workflow{}
+
+		err2 := yaml.Unmarshal(yfile, &data)
+		if err2 != nil {
+
+			log.Fatal(err2)
+		}
+		return &data
+	}
+	return &engine.Workflow{}
 }
 
-func Actions(a ActionFile) []Action {
-	return a.Actions
-}
-
-func List(file string) ActionFile {
+func List(file string) []Action {
 	yfile, err := ioutil.ReadFile(file)
 
 	if err != nil {
@@ -40,13 +51,15 @@ func List(file string) ActionFile {
 		log.Fatal(err)
 	}
 
-	data := ActionFile{}
+	data := []Action{}
 
 	err2 := yaml.Unmarshal(yfile, &data)
-
 	if err2 != nil {
 
 		log.Fatal(err2)
+	}
+	for i, v := range data {
+		data[i].Workflow = *getWorkflow(v.Location)
 	}
 
 	return data
@@ -56,7 +69,7 @@ func Confirm(act Action) (bool, error) {
 	prompt := promptui.Prompt{
 		Label:     fmt.Sprintf("Run %v", act.Name),
 		IsConfirm: true,
-		Default:   "n",
+		Default:   "y",
 	}
 	validate := func(s string) error {
 		if len(s) == 1 && strings.Contains("YyNn", s) || prompt.Default != "" && len(s) == 0 {
