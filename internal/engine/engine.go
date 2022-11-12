@@ -4,11 +4,16 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/filters"
+	"github.com/docker/docker/api/types/mount"
+	"github.com/docker/docker/api/types/volume"
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/stdcopy"
+	"github.com/jatalocks/opsilon/internal/log"
 )
 
 type Argument struct {
@@ -60,26 +65,101 @@ func GenEnvFromArgs(e []Argument) []string {
 	return envs
 }
 
-func RunStage(s Stage, ctx context.Context, cli *client.Client, envs []Env, inputs []Argument, globalImage string) {
-	if s.Image != "" {
-		reader, err := cli.ImagePull(ctx, s.Image, types.ImagePullOptions{})
-		if err != nil {
-			panic(err)
-		}
+func ImageExists(image string, ctx context.Context, cli *client.Client) bool {
 
-		defer reader.Close()
-
-		globalImage = s.Image
-	}
-	resp, err := cli.ContainerCreate(ctx, &container.Config{
-		Image: globalImage,
-		Env:   append(GenEnv(envs), GenEnvFromArgs(inputs)...),
-		Cmd:   s.Script,
-		Tty:   false,
-	}, nil, nil, nil, "")
+	images, err := cli.ImageList(ctx, types.ImageListOptions{})
 	if err != nil {
 		panic(err)
 	}
+
+	for _, extImage := range images {
+		if strings.Join(extImage.RepoTags[:], ":") == image {
+			// log.Info("Image Already Exists -", image)
+			return true
+		}
+	}
+	return false
+}
+
+func ContainerClean(id string, ctx context.Context, cli *client.Client) {
+
+	err := cli.ContainerRemove(ctx, id, types.ContainerRemoveOptions{})
+
+	if err != nil {
+		fmt.Printf("Unable to remove container %q: %q\n", id, err)
+	}
+}
+
+func FindVolume(name string, ctx context.Context, cli *client.Client) (volume *types.Volume, err error) {
+	volumes, err := cli.VolumeList(ctx, filters.NewArgs())
+
+	if err != nil {
+		return nil, err
+	}
+
+	for _, v := range volumes.Volumes {
+		if v.Name == name {
+			return v, nil
+		}
+	}
+	return nil, nil
+}
+func RemoveVolume(name string, ctx context.Context, cli *client.Client) (removed bool, err error) {
+	vol, err := FindVolume(name, ctx, cli)
+
+	if err != nil {
+		return false, err
+	}
+
+	if vol == nil {
+		return false, nil
+	}
+
+	err = cli.VolumeRemove(ctx, name, true)
+
+	if err != nil {
+		return false, err
+	}
+
+	return true, nil
+}
+
+func RunStage(s Stage, ctx context.Context, cli *client.Client, envs []Env, inputs []Argument, globalImage string, volume types.Volume) {
+	PullImage(s.Image, ctx, cli)
+	if s.Image != "" {
+		globalImage = s.Image
+	}
+	log.Info("----", "Starting Stage", s.Stage, "----")
+
+	hostConfig := container.HostConfig{}
+
+	//	hostConfig.Mounts = make([]mount.Mount,0);
+
+	var mounts []mount.Mount
+
+	// for _, volume := range volumes {
+	mount := mount.Mount{
+		Type:   mount.TypeVolume,
+		Source: volume.Name,
+		Target: "/app",
+	}
+	mounts = append(mounts, mount)
+	// }
+
+	hostConfig.Mounts = mounts
+
+	resp, err := cli.ContainerCreate(ctx, &container.Config{
+		Image:      globalImage,
+		Env:        append(GenEnv(envs), GenEnvFromArgs(inputs)...),
+		Cmd:        s.Script,
+		WorkingDir: "/app",
+		Tty:        false,
+	}, &hostConfig, nil, nil, "")
+	if err != nil {
+		panic(err)
+	}
+
+	defer ContainerClean(resp.ID, ctx, cli)
 
 	if err := cli.ContainerStart(ctx, resp.ID, types.ContainerStartOptions{}); err != nil {
 		panic(err)
@@ -100,6 +180,22 @@ func RunStage(s Stage, ctx context.Context, cli *client.Client, envs []Env, inpu
 	}
 
 	stdcopy.StdCopy(os.Stdout, os.Stderr, out)
+	log.Info("----", "Stage Ended", s.Stage, "----")
+}
+
+func PullImage(image string, ctx context.Context, cli *client.Client) {
+	if image != "" {
+		if !ImageExists(image, ctx, cli) {
+			log.Info("Pulling Image", image)
+			reader, err := cli.ImagePull(ctx, image, types.ImagePullOptions{})
+			if err != nil {
+				panic(err)
+			}
+			defer reader.Close()
+			log.Info("Image", image, "Pulled Successfully")
+		}
+		// io.Copy(os.Stdout, reader)
+	}
 }
 
 func Engine(w Workflow) {
@@ -110,17 +206,14 @@ func Engine(w Workflow) {
 	}
 	defer cli.Close()
 
-	if w.Image != "" {
-		reader, err := cli.ImagePull(ctx, w.Image, types.ImagePullOptions{})
-		if err != nil {
-			panic(err)
-		}
-		defer reader.Close()
-		// io.Copy(os.Stdout, reader)
+	PullImage(w.Image, ctx, cli)
+	vol, err2 := cli.VolumeCreate(ctx, volume.VolumeCreateBody{Driver: "local"})
+	if err2 != nil {
+		panic(err2)
 	}
-
+	defer RemoveVolume(vol.Name, ctx, cli)
 	for _, stage := range w.Stages {
-		RunStage(stage, ctx, cli, w.Env, w.Input, w.Image)
+		RunStage(stage, ctx, cli, w.Env, w.Input, w.Image, vol)
 	}
 
 }
