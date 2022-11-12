@@ -6,10 +6,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const (
-	listNumberOfArgs = 1
-)
-
 type listOptions struct {
 	file bool
 }
@@ -25,7 +21,6 @@ func newListCmd() *cobra.Command {
 		Use:          "list",
 		Short:        "list actions",
 		SilenceUsage: true,
-		Args:         cobra.ExactArgs(listNumberOfArgs),
 		RunE:         o.list,
 	}
 
@@ -40,9 +35,7 @@ func (o *listOptions) list(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	if o.file {
-		list.List(values[0])
-	}
+	list.List(values[0])
 
 	return nil
 }

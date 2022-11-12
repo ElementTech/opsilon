@@ -5,11 +5,11 @@ import (
 	"html/template"
 	"os"
 
-	"github.com/jatalocks/opsilon/internal/get"
+	"github.com/jatalocks/opsilon/internal/config"
 )
 
 func List(file string) {
-	actions := get.List(file).Actions
+	actions := config.GetConfig(file).Actions
 
 	tmpl := `{{range .}}--------- {{.Name}} ----------
 {{.Help}}

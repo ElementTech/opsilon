@@ -6,12 +6,13 @@ import (
 	"os"
 
 	"github.com/fatih/color"
+	"github.com/jatalocks/opsilon/internal/config"
 	"github.com/jatalocks/opsilon/internal/get"
 	"github.com/manifoldco/promptui"
 )
 
 func Select(file string) get.Action {
-	actions := get.Actions(get.List(file))
+	actions := config.GetConfig(file).Actions
 
 	templates := &promptui.SelectTemplates{
 		Label:    "{{ . }}",

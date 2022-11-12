@@ -6,10 +6,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const (
-	runNumberOfArgs = 1
-)
-
 type runOptions struct {
 	file bool
 }
@@ -25,7 +21,6 @@ func newRunCmd() *cobra.Command {
 		Use:          "run",
 		Short:        "run actions",
 		SilenceUsage: true,
-		Args:         cobra.ExactArgs(runNumberOfArgs),
 		RunE:         o.run,
 	}
 
@@ -40,9 +35,7 @@ func (o *runOptions) run(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	if o.file {
-		run.Select(values[0])
-	}
+	run.Select(values[0])
 
 	return nil
 }
