@@ -1,11 +1,13 @@
 package engine
 
 import (
+	"bufio"
 	"context"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 
@@ -21,22 +23,19 @@ import (
 	cp "github.com/otiai10/copy"
 )
 
-type Argument struct {
+type Input struct {
 	Name     string `mapstructure:"name"`
-	Value    string `mapstructure:"default,omitempty"`
+	Default  string `mapstructure:"default"`
 	Optional bool   `mapstructure:"optional,omitempty"`
 }
 
 type Stage struct {
-	Stage  string   `mapstructure:"stage"`
-	Script []string `mapstructure:"script"`
-	Rules  []struct {
-		If    string `mapstructure:"if"`
-		Verb  string `mapstructure:"verb"`
-		Value string `mapstructure:"value"`
-	} `mapstructure:"rules,omitempty"`
+	Stage     string   `mapstructure:"stage"`
+	Script    []string `mapstructure:"script"`
+	If        string   `mapstructure:"if"`
 	Artifacts []string `mapstructure:"artifacts,omitempty"`
 	Image     string   `mapstructure:"image,omitempty"`
+	Needs     string   `mapstructure:"needs,omitempty"`
 }
 
 type Env struct {
@@ -45,12 +44,12 @@ type Env struct {
 }
 
 type Workflow struct {
-	ID          string     `mapstructure:"id"`
-	Image       string     `mapstructure:"image"`
-	Description string     `mapstructure:"description"`
-	Env         []Env      `mapstructure:"env"`
-	Input       []Argument `mapstructure:"input"`
-	Stages      []Stage    `mapstructure:"stages"`
+	ID          string  `mapstructure:"id"`
+	Image       string  `mapstructure:"image"`
+	Description string  `mapstructure:"description"`
+	Env         []Env   `mapstructure:"env"`
+	Input       []Input `mapstructure:"input"`
+	Stages      []Stage `mapstructure:"stages"`
 }
 
 func GenEnv(e []Env) []string {
@@ -60,10 +59,10 @@ func GenEnv(e []Env) []string {
 	}
 	return envs
 }
-func GenEnvFromArgs(e []Argument) []string {
+func GenEnvFromArgs(e []Input) []string {
 	envs := make([]string, len(e))
 	for i, v := range e {
-		envs[i] = fmt.Sprintf("%s=%s", v.Name, v.Value)
+		envs[i] = fmt.Sprintf("%s=%s", v.Name, v.Default)
 	}
 	return envs
 }
@@ -123,7 +122,7 @@ func RemoveVolume(name string, ctx context.Context, cli *client.Client) (removed
 	return true, nil
 }
 
-func RunStage(s Stage, ctx context.Context, cli *client.Client, envs []Env, inputs []Argument, globalImage string, volume types.Volume, dir string) {
+func RunStage(s Stage, ctx context.Context, cli *client.Client, envs []Env, inputs []Input, globalImage string, volume types.Volume, dir string, volumeOutput types.Volume, dirOutput string) {
 	LwWhite := logger.NewLogWriter(func(str string, color color.Attribute) {
 		logger.Custom(color, fmt.Sprintf("[%s] %s", s.Stage, str))
 	}, color.FgWhite)
@@ -139,28 +138,30 @@ func RunStage(s Stage, ctx context.Context, cli *client.Client, envs []Env, inpu
 	var mounts []mount.Mount
 
 	// for _, volume := range volumes {
-	mount := mount.Mount{
+	mounts = append(mounts, mount.Mount{
 		Type:   mount.TypeVolume,
 		Source: volume.Name,
 		Target: "/app",
-	}
-	mounts = append(mounts, mount)
+	}, mount.Mount{
+		Type:   mount.TypeVolume,
+		Source: volumeOutput.Name,
+		Target: "/output",
+	})
 	// }
 
 	hostConfig.Mounts = mounts
 
 	resp, err := cli.ContainerCreate(ctx, &container.Config{
 		Image:      globalImage,
-		Env:        append(GenEnv(envs), GenEnvFromArgs(inputs)...),
+		Env:        append([]string{fmt.Sprintf("OUTPUT=/output/output")}, append(GenEnv(envs), GenEnvFromArgs(inputs)...)...),
 		Cmd:        s.Script,
 		WorkingDir: "/app",
 		Tty:        false,
 	}, &hostConfig, nil, nil, "")
 	logger.HandleErr(err)
 
-	defer ContainerClean(resp.ID, ctx, cli)
-
 	defer extractArtifacts(dir, s)
+	defer ContainerClean(resp.ID, ctx, cli)
 
 	if err := cli.ContainerStart(ctx, resp.ID, types.ContainerStartOptions{}); err != nil {
 		panic(err)
@@ -177,6 +178,7 @@ func RunStage(s Stage, ctx context.Context, cli *client.Client, envs []Env, inpu
 	logger.HandleErr(err)
 
 	stdcopy.StdCopy(LwWhite, LwWhite, out)
+
 }
 
 func PullImage(image string, ctx context.Context, cli *client.Client) {
@@ -190,6 +192,43 @@ func PullImage(image string, ctx context.Context, cli *client.Client) {
 		}
 		// io.Copy(os.Stdout, reader)
 	}
+}
+
+type AppConfigProperties map[string]string
+
+func ReadPropertiesFile(filename string) (AppConfigProperties, error) {
+	config := AppConfigProperties{}
+
+	if len(filename) == 0 {
+		return config, nil
+	}
+	file, err := os.Open(filename)
+	if err != nil {
+		log.Fatal(err)
+		return nil, err
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		line := scanner.Text()
+		if equal := strings.Index(line, "="); equal >= 0 {
+			if key := strings.TrimSpace(line[:equal]); len(key) > 0 {
+				value := ""
+				if len(line) > equal {
+					value = strings.TrimSpace(line[equal+1:])
+				}
+				config[key] = value
+			}
+		}
+	}
+
+	if err := scanner.Err(); err != nil {
+		log.Fatal(err)
+		return nil, err
+	}
+
+	return config, nil
 }
 
 func Engine(w Workflow) {
@@ -214,10 +253,41 @@ func Engine(w Workflow) {
 	if err2 != nil {
 		panic(err2)
 	}
+
 	defer RemoveVolume(vol.Name, ctx, cli)
 	defer os.RemoveAll(dir)
+
 	for _, stage := range w.Stages {
-		RunStage(stage, ctx, cli, w.Env, w.Input, w.Image, vol, dir)
+		logger.Info(stage.If)
+
+		dirOutput, err := os.MkdirTemp("", "output")
+		logger.HandleErr(err)
+		outputPath := path.Join(dirOutput, "output")
+		outputFile, err := os.Create(outputPath)
+		if err != nil {
+			log.Fatal(err, outputFile)
+		}
+
+		volOutput, err2 := cli.VolumeCreate(ctx, volume.VolumeCreateBody{
+			Driver: "local",
+			DriverOpts: map[string]string{
+				"type":   "none",
+				"device": dirOutput,
+				"o":      "bind",
+			},
+		})
+		if err2 != nil {
+			panic(err2)
+		}
+
+		defer RemoveVolume(volOutput.Name, ctx, cli)
+		defer os.RemoveAll(dirOutput)
+
+		RunStage(stage, ctx, cli, w.Env, w.Input, w.Image, vol, dir, volOutput, dirOutput)
+
+		// outputMap, err := ReadPropertiesFile(outputPath)
+		// logger.HandleErr(err)
+
 	}
 
 }

@@ -11,11 +11,12 @@ import (
 func List() {
 	actions := utils.ConfigPopulateWorkflows()
 
-	tmpl := `{{range .}}--------- {{.Name}} ----------
+	tmpl := `{{range .}}
+	--------- {{.Name}} ----------
 Description: 
-	{{.Workflow.Description}}
+{{.Workflow.Description}}
 Input: {{range .Workflow.Input}}
-	- {{.Name}} {{ if .Value}}({{.Value}}){{end}}{{end}}
+- {{.Name}} {{ if .Default}}({{.Default}}){{end}}{{end}}
 {{end}}`
 
 	t := template.Must(template.New("tmpl").Parse(tmpl))

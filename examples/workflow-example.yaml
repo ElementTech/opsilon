@@ -20,28 +20,26 @@ input:
 
 stages:
   - stage: write a file 1
+    id: writefile
     image: ubuntu:latest
+    if: $arg3 != ""
     script:
       - sh
       - -c
       - |
         echo hi
+        echo "arg4=runme" >> $OUTPUT
         mkdir testdir1 && echo $arg3 >> testdir1/test.txt
-    rules:
-      - if: $arg3
-        not: ""
     artifacts:
       - testdir1
       - test.txt # will not exist
   - stage: write a file 2
-    image: ubuntu:latest
+    needs: writefile
+    if: $arg4 == "runme"
     script:
       - sh
       - -c
       - mkdir testdir2 && echo $arg2 >> testdir2/test.txt
-    rules:
-      - if: $arg3
-        equals: ""
     artifacts:
       - testdir2
       - testdir2/test.txt

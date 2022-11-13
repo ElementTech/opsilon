@@ -49,16 +49,16 @@ func PromptArguments(act *config.Action) {
 	argsWithValues := act.Workflow.Input
 	// Each template displays the data received from the prompt with some formatting.
 	templates := &promptui.PromptTemplates{
-		Prompt:  "{{ .Name }} ({{ .Value | faint }}): ",
-		Valid:   "{{ .Name | green }} ({{ .Value | faint }}): ",
-		Invalid: "{{ .Name | red }} ({{ .Value | faint }}): ",
-		Success: "{{ .Name | bold }} ({{ .Value | faint }}): ",
+		Prompt:  "{{ .Name }} ({{ .Default | faint }}): ",
+		Valid:   "{{ .Name | green }} ({{ .Default | faint }}): ",
+		Invalid: "{{ .Name | red }} ({{ .Default | faint }}): ",
+		Success: "{{ .Name | bold }} ({{ .Default | faint }}): ",
 	}
 
 	for i, v := range argsWithValues {
 		// The validate function follows the required validator signature.
 		validate := func(input string) error {
-			if input == "" && !v.Optional && v.Value == "" {
+			if input == "" && !v.Optional && v.Default == "" {
 				return fmt.Errorf("This argument is mandatory")
 			}
 			return nil
@@ -78,16 +78,16 @@ func PromptArguments(act *config.Action) {
 		}
 
 		if result == "" {
-			result = v.Value
+			result = v.Default
 		}
 
 		// The result of the prompt, if valid, is displayed in a formatted message.
-		argsWithValues[i].Value = result
+		argsWithValues[i].Default = result
 		fmt.Printf("%s\n", result)
 	}
 	tmpl := `--------- Running "{{.Name}}" with: ----------
 {{range .Workflow.Input}}
-{{ .Name }}: {{ .Value }}
+{{ .Name }}: {{ .Default }}
 {{end}}
 	`
 

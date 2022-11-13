@@ -14,6 +14,7 @@ var listCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List all workflows available in your config file",
 	Run: func(cmd *cobra.Command, args []string) {
+		initConfig()
 		list.List()
 	},
 }
