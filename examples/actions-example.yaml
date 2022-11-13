@@ -1,4 +1,9 @@
-- name: example
+workflows:
+- name: exampleFILE
   location:
-    path: /Users/amitai.getzler/Desktop/Explorium/opsilon/examples/workflow-example.yaml
+    path: ./workflow-example.yaml
     type: file
+- name: exampleURL
+  location:
+    path: https://raw.githubusercontent.com/jatalocks/opsilon/main/examples/workflow-example.yaml
+    type: url

@@ -30,7 +30,7 @@ import (
 
 func HandleErr(err error) {
 	if err != nil {
-		Fatal(err)
+		panic(err)
 	}
 }
 

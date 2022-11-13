@@ -8,13 +8,13 @@ import (
 	"github.com/fatih/color"
 	"github.com/jatalocks/opsilon/internal/config"
 	"github.com/jatalocks/opsilon/internal/engine"
-	"github.com/jatalocks/opsilon/internal/get"
 	"github.com/jatalocks/opsilon/internal/logger"
+	"github.com/jatalocks/opsilon/internal/utils"
 	"github.com/manifoldco/promptui"
 )
 
-func Select(file string) {
-	actions := config.GetConfig(file)
+func Select() {
+	actions := utils.ConfigPopulateWorkflows()
 	templates := &promptui.SelectTemplates{
 		Label:    "{{ . }}",
 		Active:   "\u25B6\uFE0F {{ .Name | cyan }} ({{ .Workflow.Description | green }})",
@@ -35,7 +35,7 @@ func Select(file string) {
 	cyan := color.New(color.FgCyan).SprintFunc()
 	fmt.Printf("You Chose: %s\n", cyan(chosenAct.Name))
 	PromptArguments(&chosenAct)
-	toRun, err := get.Confirm(chosenAct)
+	toRun, err := utils.Confirm(chosenAct)
 	logger.HandleErr(err)
 	if toRun {
 		engine.Engine(chosenAct.Workflow)
@@ -44,7 +44,7 @@ func Select(file string) {
 	}
 }
 
-func PromptArguments(act *get.Action) {
+func PromptArguments(act *config.Action) {
 
 	argsWithValues := act.Workflow.Input
 	// Each template displays the data received from the prompt with some formatting.

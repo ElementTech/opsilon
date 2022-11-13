@@ -1,17 +1,11 @@
+/*
+Copyright © 2022 NAME HERE <EMAIL ADDRESS>
+
+*/
 package main
 
-import (
-	"fmt"
-	"os"
-
-	"github.com/jatalocks/opsilon/cmd"
-)
-
-var version = ""
+import "github.com/jatalocks/opsilon/cmd"
 
 func main() {
-	if err := cmd.Execute(version); err != nil {
-		fmt.Fprintf(os.Stderr, "%v", err)
-		os.Exit(1)
-	}
+	cmd.Execute()
 }

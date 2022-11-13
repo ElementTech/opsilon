@@ -22,35 +22,35 @@ import (
 )
 
 type Argument struct {
-	Name     string `yaml:"name"`
-	Value    string `yaml:"default"`
-	Optional bool   `yaml:"optional"`
+	Name     string `mapstructure:"name"`
+	Value    string `mapstructure:"default,omitempty"`
+	Optional bool   `mapstructure:"optional,omitempty"`
 }
 
 type Stage struct {
-	Stage  string   `yaml:"stage"`
-	Script []string `yaml:"script"`
+	Stage  string   `mapstructure:"stage"`
+	Script []string `mapstructure:"script"`
 	Rules  []struct {
-		If    string `yaml:"if"`
-		Verb  string `yaml:"verb"`
-		Value string `yaml:"value"`
-	} `yaml:"rules,omitempty"`
-	Artifacts []string `yaml:"artifacts,omitempty"`
-	Image     string   `yaml:"image,omitempty"`
+		If    string `mapstructure:"if"`
+		Verb  string `mapstructure:"verb"`
+		Value string `mapstructure:"value"`
+	} `mapstructure:"rules,omitempty"`
+	Artifacts []string `mapstructure:"artifacts,omitempty"`
+	Image     string   `mapstructure:"image,omitempty"`
 }
 
 type Env struct {
-	Name  string `yaml:"name"`
-	Value string `yaml:"value"`
+	Name  string `mapstructure:"name"`
+	Value string `mapstructure:"value"`
 }
 
 type Workflow struct {
-	ID          string     `yaml:"id"`
-	Image       string     `yaml:"image"`
-	Description string     `yaml:"description"`
-	Env         []Env      `yaml:"env"`
-	Input       []Argument `yaml:"input"`
-	Stages      []Stage    `yaml:"stages"`
+	ID          string     `mapstructure:"id"`
+	Image       string     `mapstructure:"image"`
+	Description string     `mapstructure:"description"`
+	Env         []Env      `mapstructure:"env"`
+	Input       []Argument `mapstructure:"input"`
+	Stages      []Stage    `mapstructure:"stages"`
 }
 
 func GenEnv(e []Env) []string {

@@ -1,3 +1,6 @@
+/*
+Copyright © 2022 NAME HERE <EMAIL ADDRESS>
+*/
 package cmd
 
 import (
@@ -6,46 +9,25 @@ import (
 	"github.com/spf13/cobra"
 )
 
-type listOptions struct {
-	file bool
+// listCmd represents the list command
+var listCmd = &cobra.Command{
+	Use:   "list",
+	Short: "List all workflows available in your config file",
+	Run: func(cmd *cobra.Command, args []string) {
+		list.List()
+	},
 }
 
-func defaultListOptions() *listOptions {
-	return &listOptions{}
-}
+func init() {
+	rootCmd.AddCommand(listCmd)
 
-func newListCmd() *cobra.Command {
-	o := defaultListOptions()
+	// Here you will define your flags and configuration settings.
 
-	cmd := &cobra.Command{
-		Use:          "list",
-		Short:        "list actions",
-		SilenceUsage: true,
-		RunE:         o.list,
-	}
+	// Cobra supports Persistent Flags which will work for this command
+	// and all subcommands, e.g.:
+	// listCmd.PersistentFlags().String("foo", "", "A help for foo")
 
-	cmd.Flags().BoolVarP(&o.file, "file", "f", o.file, "path to an actions file (override configure)")
-
-	return cmd
-}
-
-func (o *listOptions) list(cmd *cobra.Command, args []string) error {
-	values, err := o.parseArgs(args)
-	if err != nil {
-		return err
-	}
-
-	list.List(values[0])
-
-	return nil
-}
-
-func (o *listOptions) parseArgs(args []string) ([]string, error) {
-	values := make([]string, 1) //nolint: gomnd
-
-	for i, a := range args {
-		values[i] = a
-	}
-
-	return values, nil
+	// Cobra supports local flags which will only run when this command
+	// is called directly, e.g.:
+	// listCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }

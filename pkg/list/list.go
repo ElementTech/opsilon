@@ -4,12 +4,12 @@ import (
 	"html/template"
 	"os"
 
-	"github.com/jatalocks/opsilon/internal/config"
 	"github.com/jatalocks/opsilon/internal/logger"
+	"github.com/jatalocks/opsilon/internal/utils"
 )
 
-func List(file string) {
-	actions := config.GetConfig(file)
+func List() {
+	actions := utils.ConfigPopulateWorkflows()
 
 	tmpl := `{{range .}}--------- {{.Name}} ----------
 Description: 

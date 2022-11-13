@@ -1,51 +1,32 @@
+/*
+Copyright © 2022 NAME HERE <EMAIL ADDRESS>
+*/
 package cmd
 
 import (
 	"github.com/jatalocks/opsilon/pkg/run"
-
 	"github.com/spf13/cobra"
 )
 
-type runOptions struct {
-	file bool
+// runCmd represents the run command
+var runCmd = &cobra.Command{
+	Use:   "run",
+	Short: "Run an available workflow",
+	Run: func(cmd *cobra.Command, args []string) {
+		run.Select()
+	},
 }
 
-func defaultRunOptions() *runOptions {
-	return &runOptions{}
-}
+func init() {
+	rootCmd.AddCommand(runCmd)
 
-func newRunCmd() *cobra.Command {
-	o := defaultRunOptions()
+	// Here you will define your flags and configuration settings.
 
-	cmd := &cobra.Command{
-		Use:          "run",
-		Short:        "run actions",
-		SilenceUsage: true,
-		RunE:         o.run,
-	}
+	// Cobra supports Persistent Flags which will work for this command
+	// and all subcommands, e.g.:
+	// runCmd.PersistentFlags().String("foo", "", "A help for foo")
 
-	cmd.Flags().BoolVarP(&o.file, "file", "f", o.file, "path to an actions file (override configure)")
-
-	return cmd
-}
-
-func (o *runOptions) run(cmd *cobra.Command, args []string) error {
-	values, err := o.parseArgs(args)
-	if err != nil {
-		return err
-	}
-
-	run.Select(values[0])
-
-	return nil
-}
-
-func (o *runOptions) parseArgs(args []string) ([]string, error) {
-	values := make([]string, 1) //nolint: gomnd
-
-	for i, a := range args {
-		values[i] = a
-	}
-
-	return values, nil
+	// Cobra supports local flags which will only run when this command
+	// is called directly, e.g.:
+	// runCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }
