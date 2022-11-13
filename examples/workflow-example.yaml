@@ -24,25 +24,29 @@ stages:
     script:
       - sh
       - -c
-      - echo $arg3 >> test.txt
+      - |
+        echo hi
+        mkdir testdir1 && echo $arg3 >> testdir1/test.txt
     rules:
       - if: $arg3
         not: ""
     artifacts:
       paths:
-        - test.txt
+        - testdir1
+        - test.txt # will not exist
   - stage: write a file 2
     image: ubuntu:latest
     script:
       - sh
       - -c
-      - echo $arg2 >> test.txt
+      - mkdir testdir2 && echo $arg2 >> testdir2/test.txt
     rules:
       - if: $arg3
         equals: ""
     artifacts:
       paths:
-        - test.txt
+        - testdir2
+        - testdir2/test.txt
   - stage: read the file
     script:
       - sh
