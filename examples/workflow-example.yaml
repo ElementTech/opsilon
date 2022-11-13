@@ -31,9 +31,8 @@ stages:
       - if: $arg3
         not: ""
     artifacts:
-      paths:
-        - testdir1
-        - test.txt # will not exist
+      - testdir1
+      - test.txt # will not exist
   - stage: write a file 2
     image: ubuntu:latest
     script:
@@ -44,9 +43,8 @@ stages:
       - if: $arg3
         equals: ""
     artifacts:
-      paths:
-        - testdir2
-        - testdir2/test.txt
+      - testdir2
+      - testdir2/test.txt
   - stage: read the file
     script:
       - sh

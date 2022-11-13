@@ -35,10 +35,8 @@ type Stage struct {
 		Verb  string `yaml:"verb"`
 		Value string `yaml:"value"`
 	} `yaml:"rules,omitempty"`
-	Artifacts struct {
-		Paths []string `yaml:"paths"`
-	} `yaml:"artifacts,omitempty"`
-	Image string `yaml:"image,omitempty"`
+	Artifacts []string `yaml:"artifacts,omitempty"`
+	Image     string   `yaml:"image,omitempty"`
 }
 
 type Env struct {
@@ -73,9 +71,7 @@ func GenEnvFromArgs(e []Argument) []string {
 func ImageExists(image string, ctx context.Context, cli *client.Client) bool {
 
 	images, err := cli.ImageList(ctx, types.ImageListOptions{})
-	if err != nil {
-		panic(err)
-	}
+	logger.HandleErr(err)
 
 	for _, extImage := range images {
 		if strings.Join(extImage.RepoTags[:], ":") == image {
@@ -90,9 +86,7 @@ func ContainerClean(id string, ctx context.Context, cli *client.Client) {
 
 	err := cli.ContainerRemove(ctx, id, types.ContainerRemoveOptions{})
 
-	if err != nil {
-		fmt.Printf("Unable to remove container %q: %q\n", id, err)
-	}
+	logger.HandleErr(err)
 }
 
 func FindVolume(name string, ctx context.Context, cli *client.Client) (volume *types.Volume, err error) {
@@ -162,9 +156,7 @@ func RunStage(s Stage, ctx context.Context, cli *client.Client, envs []Env, inpu
 		WorkingDir: "/app",
 		Tty:        false,
 	}, &hostConfig, nil, nil, "")
-	if err != nil {
-		panic(err)
-	}
+	logger.HandleErr(err)
 
 	defer ContainerClean(resp.ID, ctx, cli)
 
@@ -177,16 +169,12 @@ func RunStage(s Stage, ctx context.Context, cli *client.Client, envs []Env, inpu
 	statusCh, errCh := cli.ContainerWait(ctx, resp.ID, container.WaitConditionNotRunning)
 	select {
 	case err := <-errCh:
-		if err != nil {
-			panic(err)
-		}
+		logger.HandleErr(err)
 	case <-statusCh:
 	}
 
 	out, err := cli.ContainerLogs(ctx, resp.ID, types.ContainerLogsOptions{ShowStdout: true})
-	if err != nil {
-		panic(err)
-	}
+	logger.HandleErr(err)
 
 	stdcopy.StdCopy(LwWhite, LwWhite, out)
 }
@@ -196,9 +184,7 @@ func PullImage(image string, ctx context.Context, cli *client.Client) {
 		if !ImageExists(image, ctx, cli) {
 			logger.Info("Pulling Image", image)
 			reader, err := cli.ImagePull(ctx, image, types.ImagePullOptions{})
-			if err != nil {
-				panic(err)
-			}
+			logger.HandleErr(err)
 			defer reader.Close()
 			logger.Info("Image", image, "Pulled Successfully")
 		}
@@ -209,17 +195,13 @@ func PullImage(image string, ctx context.Context, cli *client.Client) {
 func Engine(w Workflow) {
 	ctx := context.Background()
 	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
-	if err != nil {
-		panic(err)
-	}
+	logger.HandleErr(err)
 	defer cli.Close()
 
 	PullImage(w.Image, ctx, cli)
 
 	dir, err := os.MkdirTemp("", "app")
-	if err != nil {
-		logger.Fatal(err)
-	}
+	logger.HandleErr(err)
 
 	vol, err2 := cli.VolumeCreate(ctx, volume.VolumeCreateBody{
 		Driver: "local",
@@ -256,7 +238,7 @@ func extractArtifacts(path string, s Stage) {
 		logger.Free(white(fmt.Sprintf("[%s] ", s.Stage), colFuc(str)))
 	}, color.FgRed), "", 0)
 
-	for _, v := range s.Artifacts.Paths {
+	for _, v := range s.Artifacts {
 		fullPath := filepath.Join(path, v)
 		fi, err := os.Stat(fullPath)
 		if err != nil {

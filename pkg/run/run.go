@@ -9,6 +9,7 @@ import (
 	"github.com/jatalocks/opsilon/internal/config"
 	"github.com/jatalocks/opsilon/internal/engine"
 	"github.com/jatalocks/opsilon/internal/get"
+	"github.com/jatalocks/opsilon/internal/logger"
 	"github.com/manifoldco/promptui"
 )
 
@@ -29,17 +30,13 @@ func Select(file string) {
 
 	i, _, err := prompt.Run()
 
-	if err != nil {
-		fmt.Printf("Prompt failed %v\n", err)
-	}
+	logger.HandleErr(err)
 	chosenAct := actions[i]
 	cyan := color.New(color.FgCyan).SprintFunc()
 	fmt.Printf("You Chose: %s\n", cyan(chosenAct.Name))
 	PromptArguments(&chosenAct)
 	toRun, err := get.Confirm(chosenAct)
-	if err != nil {
-		fmt.Printf("Prompt failed %v\n", err)
-	}
+	logger.HandleErr(err)
 	if toRun {
 		engine.Engine(chosenAct.Workflow)
 	} else {
@@ -97,7 +94,6 @@ func PromptArguments(act *get.Action) {
 	t := template.Must(template.New("tmpl").Parse(tmpl))
 
 	err := t.Execute(os.Stdout, act)
-	if err != nil {
-		fmt.Println("executing template:", err)
-	}
+
+	logger.HandleErr(err)
 }

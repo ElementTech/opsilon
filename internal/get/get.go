@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/jatalocks/opsilon/internal/engine"
+	"github.com/jatalocks/opsilon/internal/logger"
 	"github.com/manifoldco/promptui"
 	"gopkg.in/yaml.v2"
 )
@@ -27,10 +28,7 @@ func getWorkflow(location Location) *engine.Workflow {
 	if location.Type == "file" {
 		yfile, err := ioutil.ReadFile(location.Path)
 
-		if err != nil {
-
-			log.Fatal(err)
-		}
+		logger.HandleErr(err)
 		data := engine.Workflow{}
 
 		err2 := yaml.Unmarshal(yfile, &data)
@@ -46,10 +44,7 @@ func getWorkflow(location Location) *engine.Workflow {
 func List(file string) []Action {
 	yfile, err := ioutil.ReadFile(file)
 
-	if err != nil {
-
-		log.Fatal(err)
-	}
+	logger.HandleErr(err)
 
 	data := []Action{}
 

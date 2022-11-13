@@ -3,18 +3,16 @@ package config
 import (
 	"errors"
 	"fmt"
-	"log"
 	"os"
 
 	"github.com/fatih/color"
 	"github.com/jatalocks/opsilon/internal/get"
+	"github.com/jatalocks/opsilon/internal/logger"
 )
 
 func ConfigExists() bool {
 	dirname, err := os.UserHomeDir()
-	if err != nil {
-		log.Fatal(err)
-	}
+	logger.HandleErr(err)
 	if _, err := os.Stat(dirname + "/" + ".opsilon" + "/opsilon.yaml"); errors.Is(err, os.ErrNotExist) {
 		return false
 	}
@@ -25,9 +23,7 @@ func GetConfig(f string) []get.Action {
 	if f == "" {
 		if ConfigExists() {
 			dirname, err := os.UserHomeDir()
-			if err != nil {
-				log.Fatal(err)
-			}
+			logger.HandleErr(err)
 			return get.List(dirname + "/" + ".opsilon" + "/opsilon.yaml")
 		} else {
 			cyan := color.New(color.FgCyan).SprintFunc()

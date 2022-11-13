@@ -1,11 +1,11 @@
 package list
 
 import (
-	"fmt"
 	"html/template"
 	"os"
 
 	"github.com/jatalocks/opsilon/internal/config"
+	"github.com/jatalocks/opsilon/internal/logger"
 )
 
 func List(file string) {
@@ -20,8 +20,6 @@ Input: {{range .Workflow.Input}}
 
 	t := template.Must(template.New("tmpl").Parse(tmpl))
 	err := t.Execute(os.Stdout, actions)
-	if err != nil {
-		fmt.Println("executing template:", err)
-	}
+	logger.HandleErr(err)
 
 }

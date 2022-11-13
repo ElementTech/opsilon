@@ -28,6 +28,12 @@ import (
 // 	Custom(color, fmt.Sprintf("[%s] %s", s.Stage, str))
 // }, color.FgYellow)
 
+func HandleErr(err error) {
+	if err != nil {
+		Fatal(err)
+	}
+}
+
 func Free(text ...string) {
 	fmt.Println(strings.Join(text[:], " "))
 }
