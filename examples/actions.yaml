@@ -1,7 +1,7 @@
 workflows:
 - name: exampleFILE
   location:
-    path: ./workflow-example.yaml
+    path: ./workflow.yaml
     type: file
 - name: exampleURL
   location:

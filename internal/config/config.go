@@ -18,7 +18,7 @@ type Action struct {
 }
 
 type ActionFile struct {
-	Actions []Action `mapstructure:"workflows"`
+	Actions []Action `mapstructure:"workflows" validate:"nonzero"`
 }
 
 var C ActionFile
