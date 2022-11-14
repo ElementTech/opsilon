@@ -1,9 +1,15 @@
 package engine
 
 import (
+	"context"
 	"fmt"
+	"os"
 	"strings"
+	"sync"
 
+	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/client"
+	"github.com/jatalocks/opsilon/internal/logger"
 	"github.com/kendru/darwin/go/depgraph"
 )
 
@@ -13,34 +19,36 @@ func workflowToGraph(g *depgraph.Graph, w Workflow) {
 	}
 }
 
-//	func stageRunner(c chan []Stage) {
-//		for {
-//			msg := <-c
-//			fmt.Println(msg)
-//			time.Sleep(time.Second * 1)
-//		}
-//	}
+func runStageGroup(wg *sync.WaitGroup, stageIDs []string, cli *client.Client, ctx context.Context, w Workflow, vol types.Volume, dir string, allOutputs map[string][]Env) {
+	for _, id := range stageIDs {
+		go Engine(cli, ctx, w, id, vol, dir, allOutputs, wg)
+	}
+}
 func ToGraph(w Workflow) {
-	// var c chan string = make(chan string)
+	ctx := context.Background()
+	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
+	logger.HandleErr(err)
+	defer cli.Close()
 
-	// go pinger(c)
-	// go printer(c)
+	PullImage(w.Image, ctx, cli)
 
+	vol, dir := createVolume(cli, ctx)
+
+	defer RemoveVolume(vol.Name, ctx, cli)
+	defer os.RemoveAll(dir)
+
+	allOutputs := make(map[string][]Env, 0)
+
+	wg := new(sync.WaitGroup)
 	g := depgraph.New()
 	workflowToGraph(g, w)
-
-	for i, layer := range g.TopoSortedLayers() {
-		fmt.Printf("%d: %s\n", i, strings.Join(layer, ", "))
-	}
 	fmt.Println(g.TopoSortedLayers())
+	for i, layer := range g.TopoSortedLayers() {
+		if len(layer) > 0 {
+			fmt.Printf("%d: %s\n", i, strings.Join(layer, ", "))
+			wg.Add(len(layer))
+			go runStageGroup(wg, layer, cli, ctx, w, vol, dir, allOutputs)
+			wg.Wait()
+		}
+	}
 }
-
-// func generateGraph(w Workflow) {
-// 	var c chan []Stage = make(chan []Stage)
-// 	paraArr := make([]Stage, 0)
-// 	for _, s := range w.Stages {
-// 		if s.Needs != "" {
-// 			paraArr = append(paraArr, s)
-// 		}
-// 	}
-// }

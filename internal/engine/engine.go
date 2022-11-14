@@ -10,6 +10,7 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+	"sync"
 	"unicode/utf8"
 
 	"github.com/Knetic/govaluate"
@@ -236,66 +237,50 @@ func ReadPropertiesFile(filename string) ([]Env, error) {
 	return config, nil
 }
 
-func Engine(w Workflow) {
-	ctx := context.Background()
-	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
+func Engine(cli *client.Client, ctx context.Context, w Workflow, sID string, vol types.Volume, dir string, allOutputs map[string][]Env, wg *sync.WaitGroup) {
+	defer wg.Done()
+	idx := slices.IndexFunc(w.Stages, func(c Stage) bool { return c.ID == sID })
+	stage := w.Stages[idx]
+	volOutput, dirOutput := createVolume(cli, ctx)
+	outputPath := path.Join(dirOutput, "output")
+	_, err := os.Create(outputPath)
 	logger.HandleErr(err)
-	defer cli.Close()
 
-	PullImage(w.Image, ctx, cli)
+	defer RemoveVolume(volOutput.Name, ctx, cli)
+	defer os.RemoveAll(dirOutput)
 
-	vol, dir := createVolume(cli, ctx)
-
-	defer RemoveVolume(vol.Name, ctx, cli)
-	defer os.RemoveAll(dir)
-
-	allOutputs := make(map[string][]Env, 0)
-
-	for _, stage := range w.Stages {
-
-		volOutput, dirOutput := createVolume(cli, ctx)
-		outputPath := path.Join(dirOutput, "output")
-		_, err := os.Create(outputPath)
-		logger.HandleErr(err)
-
-		defer RemoveVolume(volOutput.Name, ctx, cli)
-		defer os.RemoveAll(dirOutput)
-
-		allEnvs := append(w.Env, stage.Env...)
-		allEnvs = append(allEnvs, GenEnvFromArgs(w.Input)...)
-		if stage.Needs != "" {
-			if val, ok := allOutputs[stage.Needs]; ok {
-				allEnvs = append(allEnvs, val...)
-			}
+	allEnvs := append(w.Env, stage.Env...)
+	allEnvs = append(allEnvs, GenEnvFromArgs(w.Input)...)
+	if stage.Needs != "" {
+		if val, ok := allOutputs[stage.Needs]; ok {
+			allEnvs = append(allEnvs, val...)
 		}
-		LwWhite := logger.NewLogWriter(func(str string, color color.Attribute) {
-			logger.Custom(color, fmt.Sprintf("[%s] %s", stage.Stage, str))
-		}, color.FgWhite)
+	}
+	LwWhite := logger.NewLogWriter(func(str string, color color.Attribute) {
+		logger.Custom(color, fmt.Sprintf("[%s] %s", stage.Stage, str))
+	}, color.FgWhite)
 
-		LwCrossed := log.New(logger.NewLogWriter(func(str string, col color.Attribute) {
-			colFuc := color.New(col).SprintFunc()
-			white := color.New(color.CrossedOut).SprintFunc()
-			logger.Free(white(fmt.Sprintf("[%s] ", stage.Stage), colFuc(str)))
-		}, color.BgYellow), "", 0)
+	LwCrossed := log.New(logger.NewLogWriter(func(str string, col color.Attribute) {
+		colFuc := color.New(col).SprintFunc()
+		white := color.New(color.CrossedOut).SprintFunc()
+		logger.Free(white(fmt.Sprintf("[%s] ", stage.Stage), colFuc(str)))
+	}, color.BgYellow), "", 0)
 
-		if !evaluateCondition(stage.If, allEnvs, LwWhite) {
-			LwCrossed.Println("Stage Skipped due to IF condition")
+	if !evaluateCondition(stage.If, allEnvs, LwWhite) {
+		LwCrossed.Println("Stage Skipped due to IF condition")
+	} else {
+		if stage.Clean {
+			volClean, dirClean := createVolume(cli, ctx)
+			RunStage(stage, ctx, cli, allEnvs, w.Image, volClean, dirClean, volOutput, dirOutput, LwWhite)
 		} else {
-			if stage.Clean {
-				volClean, dirClean := createVolume(cli, ctx)
-				RunStage(stage, ctx, cli, allEnvs, w.Image, volClean, dirClean, volOutput, dirOutput, LwWhite)
-			} else {
-				RunStage(stage, ctx, cli, allEnvs, w.Image, vol, dir, volOutput, dirOutput, LwWhite)
-			}
-
+			RunStage(stage, ctx, cli, allEnvs, w.Image, vol, dir, volOutput, dirOutput, LwWhite)
 		}
-
-		outputMap, err := ReadPropertiesFile(outputPath)
-		logger.HandleErr(err)
-		allOutputs[stage.ID] = outputMap
 
 	}
 
+	outputMap, err := ReadPropertiesFile(outputPath)
+	logger.HandleErr(err)
+	allOutputs[stage.ID] = outputMap
 }
 
 func createVolume(cli *client.Client, ctx context.Context) (vol types.Volume, dir string) {
