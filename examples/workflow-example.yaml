@@ -37,6 +37,7 @@ stages:
       - testdir1
       - test.txt # will not exist
   - stage: write a file 2
+    id: writefile2
     needs: writefile # will get the outputs of the stage with this ID
     clean: true # this stage will not share a filesystem with the other stages. It will start with a clean /app as working directory.
     if: $arg4 == "runme"
@@ -48,7 +49,22 @@ stages:
       - testdir2
       - testdir2/test.txt
   - stage: read the file
+    id: readfile
     script:
       - sh
       - -c
       - ls -l && cat test.txt
+  - stage: just a random step
+    id: testme
+    needs: writefile2
+    script:
+      - sh
+      - -c
+      - ls -l && cat test.txt
+  - stage: just a random step
+    id: testme2
+    needs: writefile2
+    script:
+      - sh
+      - -c
+      - ls -l && cat test.txt            

@@ -38,7 +38,8 @@ func Select() {
 	toRun, err := utils.Confirm(chosenAct)
 	logger.HandleErr(err)
 	if toRun {
-		engine.Engine(chosenAct.Workflow)
+		// engine.Engine(chosenAct.Workflow)
+		engine.ToGraph(chosenAct.Workflow)
 	} else {
 		fmt.Println("Run Canceled")
 	}
