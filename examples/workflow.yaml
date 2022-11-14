@@ -45,7 +45,7 @@ stages:
       - test.txt # Will not exist, the runner will ignore this and print a warning.
   - stage: write a file
     id: writefile2
-    needs: writefile # Will get the outputs of the stage with this ID. Comma Seperated list of stage IDs
+    needs: writefile # Will get the outputs of the stage with this ID. Comma Separated list of stage IDs
     clean: true # Enabling this will make this stage will not share a filesystem with the other stages. It will start with a clean /app as working directory.
     if: $exportedArg == "wrong_output" # Run only if the output of the step it needs is equal this string.
     script:
@@ -60,7 +60,7 @@ stages:
       - testdir2/test.txt # It has no effect to copy file twice.
   - stage: read the file
     id: readfile
-    needs: writefile,writefile2 # Comma Seperated list of stage IDs
+    needs: writefile,writefile2 # Comma Separated list of stage IDs
     if: $exportedArg == "i_am_an_output"
     script:
       - sh

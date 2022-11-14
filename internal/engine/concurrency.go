@@ -22,13 +22,13 @@ func workflowToGraph(g *depgraph.Graph, w Workflow) {
 	}
 }
 
-func runStageGroup(wg *sync.WaitGroup, stageIDs []string, cli *client.Client, ctx context.Context, w Workflow, vol types.Volume, dir string, allOutputs map[string][]Env) {
+func runStageGroup(wg *sync.WaitGroup, stageIDs []string, cli *client.Client, ctx context.Context, w Workflow, vol types.Volume, dir string, allOutputs map[string][]Env, skippedStages *[]string) {
 	for _, id := range stageIDs {
-		go Engine(cli, ctx, w, id, vol, dir, allOutputs, wg)
+		go Engine(cli, ctx, w, id, vol, dir, allOutputs, wg, skippedStages)
 	}
 }
 func ToGraph(w Workflow) {
-	// skippedStages := make([]string, 0)
+	skippedStages := make([]string, 0)
 
 	ctx := context.Background()
 	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
@@ -51,7 +51,7 @@ func ToGraph(w Workflow) {
 		if (len(layer) > 0) && (layer[0] != "") {
 			fmt.Printf("Running in Parallel: %s\n", strings.Join(layer, ", "))
 			wg.Add(len(layer))
-			go runStageGroup(wg, layer, cli, ctx, w, vol, dir, allOutputs)
+			go runStageGroup(wg, layer, cli, ctx, w, vol, dir, allOutputs, &skippedStages)
 			wg.Wait()
 		}
 	}

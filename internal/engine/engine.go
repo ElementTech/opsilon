@@ -237,7 +237,7 @@ func ReadPropertiesFile(filename string) ([]Env, error) {
 	return config, nil
 }
 
-func Engine(cli *client.Client, ctx context.Context, w Workflow, sID string, vol types.Volume, dir string, allOutputs map[string][]Env, wg *sync.WaitGroup) {
+func Engine(cli *client.Client, ctx context.Context, w Workflow, sID string, vol types.Volume, dir string, allOutputs map[string][]Env, wg *sync.WaitGroup, skippedStages *[]string) {
 	defer wg.Done()
 	idx := slices.IndexFunc(w.Stages, func(c Stage) bool { return c.ID == sID })
 	stage := w.Stages[idx]
@@ -251,8 +251,9 @@ func Engine(cli *client.Client, ctx context.Context, w Workflow, sID string, vol
 
 	allEnvs := append(w.Env, stage.Env...)
 	allEnvs = append(allEnvs, GenEnvFromArgs(w.Input)...)
+	needSplit := strings.Split(stage.Needs, ",")
 	if stage.Needs != "" {
-		needSplit := strings.Split(stage.Needs, ",")
+
 		for _, v := range needSplit {
 			if val, ok := allOutputs[v]; ok {
 				allEnvs = append(allEnvs, val...)
@@ -270,13 +271,27 @@ func Engine(cli *client.Client, ctx context.Context, w Workflow, sID string, vol
 	}, color.BgYellow), "", 0)
 
 	if !evaluateCondition(stage.If, allEnvs, LwWhite) {
+		skippedStages = append(skippedStages, stage.ID)
 		LwCrossed.Println("Stage Skipped due to IF condition")
 	} else {
-		if stage.Clean {
-			volClean, dirClean := createVolume(cli, ctx)
-			RunStage(stage, ctx, cli, allEnvs, w.Image, volClean, dirClean, volOutput, dirOutput, LwWhite)
+		toSkip := false
+		for _, skipped := range skippedStages {
+			for _, need := range needSplit {
+				if need == skipped {
+					toSkip = true
+				}
+			}
+		}
+		if toSkip {
+			skippedStages = append(skippedStages, stage.ID)
+			LwCrossed.Println("Stage Skipped due to needed stage skipped")
 		} else {
-			RunStage(stage, ctx, cli, allEnvs, w.Image, vol, dir, volOutput, dirOutput, LwWhite)
+			if stage.Clean {
+				volClean, dirClean := createVolume(cli, ctx)
+				RunStage(stage, ctx, cli, allEnvs, w.Image, volClean, dirClean, volOutput, dirOutput, LwWhite)
+			} else {
+				RunStage(stage, ctx, cli, allEnvs, w.Image, vol, dir, volOutput, dirOutput, LwWhite)
+			}
 		}
 
 	}
