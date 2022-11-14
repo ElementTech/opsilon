@@ -42,10 +42,9 @@ func ToGraph(w Workflow) {
 	wg := new(sync.WaitGroup)
 	g := depgraph.New()
 	workflowToGraph(g, w)
-	fmt.Println(g.TopoSortedLayers())
-	for i, layer := range g.TopoSortedLayers() {
-		if len(layer) > 0 {
-			fmt.Printf("%d: %s\n", i, strings.Join(layer, ", "))
+	for _, layer := range g.TopoSortedLayers() {
+		if (len(layer) > 0) && (layer[0] != "") {
+			fmt.Printf("Running in Parallel: %s\n", strings.Join(layer, ", "))
 			wg.Add(len(layer))
 			go runStageGroup(wg, layer, cli, ctx, w, vol, dir, allOutputs)
 			wg.Wait()

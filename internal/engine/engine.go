@@ -257,13 +257,13 @@ func Engine(cli *client.Client, ctx context.Context, w Workflow, sID string, vol
 		}
 	}
 	LwWhite := logger.NewLogWriter(func(str string, color color.Attribute) {
-		logger.Custom(color, fmt.Sprintf("[%s] %s", stage.Stage, str))
+		logger.Custom(color, fmt.Sprintf("[%s:%s] %s", stage.Stage, stage.ID, str))
 	}, color.FgWhite)
 
 	LwCrossed := log.New(logger.NewLogWriter(func(str string, col color.Attribute) {
 		colFuc := color.New(col).SprintFunc()
 		white := color.New(color.CrossedOut).SprintFunc()
-		logger.Free(white(fmt.Sprintf("[%s] ", stage.Stage), colFuc(str)))
+		logger.Free(white(fmt.Sprintf("[%s:%s] ", stage.Stage, stage.ID), colFuc(str)))
 	}, color.BgYellow), "", 0)
 
 	if !evaluateCondition(stage.If, allEnvs, LwWhite) {
@@ -348,15 +348,15 @@ func extractArtifacts(path string, s Stage) {
 
 	LwOperation := log.New(logger.NewLogWriter(func(str string, col color.Attribute) {
 		colFuc := color.New(col).SprintFunc()
-		logger.Free(white(fmt.Sprintf("[%s] ", s.Stage), colFuc(str)))
+		logger.Free(white(fmt.Sprintf("[%s:%s] ", s.Stage, s.ID), colFuc(str)))
 	}, color.FgYellow), "", 0)
 	LwSuccess := log.New(logger.NewLogWriter(func(str string, col color.Attribute) {
 		colFuc := color.New(col).SprintFunc()
-		logger.Free(white(fmt.Sprintf("[%s] ", s.Stage), colFuc(str)))
+		logger.Free(white(fmt.Sprintf("[%s:%s] ", s.Stage, s.ID), colFuc(str)))
 	}, color.FgGreen), "", 0)
 	LwError := log.New(logger.NewLogWriter(func(str string, col color.Attribute) {
 		colFuc := color.New(col).SprintFunc()
-		logger.Free(white(fmt.Sprintf("[%s] ", s.Stage), colFuc(str)))
+		logger.Free(white(fmt.Sprintf("[%s:%s] ", s.Stage, s.ID), colFuc(str)))
 	}, color.FgRed), "", 0)
 
 	for _, v := range s.Artifacts {
