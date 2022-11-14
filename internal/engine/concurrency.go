@@ -28,6 +28,8 @@ func runStageGroup(wg *sync.WaitGroup, stageIDs []string, cli *client.Client, ct
 	}
 }
 func ToGraph(w Workflow) {
+	// skippedStages := make([]string, 0)
+
 	ctx := context.Background()
 	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 	logger.HandleErr(err)

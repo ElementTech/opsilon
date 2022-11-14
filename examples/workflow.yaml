@@ -20,7 +20,8 @@ input:
   - name: arg3
     optional: true # If skipped in the CLI input phase, will default to an empty string [($arg3 == "") == true]
 
-# Must include at least one stage
+# Stages Rules
+# 1. All stages will run in parallel unless they have a "needs" field
 stages:
   - stage: write a file # Name of the stage. These can be non-unique.
     id: writefile # ID of the stage. Used for 'outputs' and 'needs'. These need to be unique.
