@@ -252,8 +252,11 @@ func Engine(cli *client.Client, ctx context.Context, w Workflow, sID string, vol
 	allEnvs := append(w.Env, stage.Env...)
 	allEnvs = append(allEnvs, GenEnvFromArgs(w.Input)...)
 	if stage.Needs != "" {
-		if val, ok := allOutputs[stage.Needs]; ok {
-			allEnvs = append(allEnvs, val...)
+		needSplit := strings.Split(stage.Needs, ",")
+		for _, v := range needSplit {
+			if val, ok := allOutputs[v]; ok {
+				allEnvs = append(allEnvs, val...)
+			}
 		}
 	}
 	LwWhite := logger.NewLogWriter(func(str string, color color.Attribute) {

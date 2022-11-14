@@ -15,7 +15,10 @@ import (
 
 func workflowToGraph(g *depgraph.Graph, w Workflow) {
 	for _, s := range w.Stages {
-		g.DependOn(s.ID, s.Needs)
+		needSplit := strings.Split(s.Needs, ",")
+		for _, v := range needSplit {
+			g.DependOn(s.ID, v)
+		}
 	}
 }
 

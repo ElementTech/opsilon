@@ -5,5 +5,5 @@ workflows:
     type: file
 - name: exampleURL
   location:
-    path: https://raw.githubusercontent.com/jatalocks/opsilon/main/examples/workflow-example.yaml
+    path: https://raw.githubusercontent.com/jatalocks/opsilon/main/examples/workflow.yaml
     type: url

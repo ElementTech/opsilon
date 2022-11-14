@@ -23,7 +23,7 @@ input:
 # Must include at least one stage
 stages:
   - stage: write a file # Name of the stage. These can be non-unique.
-    id: writefile # ID of the stage. Used for 'outputs' and 'needs'
+    id: writefile # ID of the stage. Used for 'outputs' and 'needs'. These need to be unique.
     image: ubuntu:latest # Override global image for this stage only.
     env: # Stage specific environment variables
       - name: onlyhere
@@ -41,36 +41,27 @@ stages:
         echo $arg3 >> testdir1/test.txt
     artifacts: # Will be saved to the Working Directory where opsilon CLI was run from.
       - testdir1
-      - test.txt # Will not exist, the runner will ignore this and pring a warning.
+      - test.txt # Will not exist, the runner will ignore this and print a warning.
   - stage: write a file
     id: writefile2
-    needs: writefile # will get the outputs of the stage with this ID
-    clean: true # this stage will not share a filesystem with the other stages. It will start with a clean /app as working directory.
-    if: $arg4 == "runme"
+    needs: writefile # Will get the outputs of the stage with this ID. Comma Seperated list of stage IDs
+    clean: true # Enabling this will make this stage will not share a filesystem with the other stages. It will start with a clean /app as working directory.
+    if: $exportedArg == "wrong_output" # Run only if the output of the step it needs is equal this string.
     script:
       - sh
       - -c
-      - mkdir testdir2 && echo $arg4 >> testdir2/test.txt && ls -l
+      - |
+        mkdir testdir2
+        echo $exportedArg >> testdir2/test.txt
+        ls -l
     artifacts:
-      - testdir2
-      - testdir2/test.txt
+      - testdir2 # Copies files inside it.
+      - testdir2/test.txt # It has no effect to copy file twice.
   - stage: read the file
     id: readfile
+    needs: writefile,writefile2 # Comma Seperated list of stage IDs
+    if: $exportedArg == "i_am_an_output"
     script:
       - sh
       - -c
-      - ls -l && cat test.txt
-  - stage: just a random step
-    id: testme
-    needs: writefile2
-    script:
-      - sh
-      - -c
-      - ls -l && cat test.txt
-  - stage: just a random step
-    id: testme2
-    needs: writefile2
-    script:
-      - sh
-      - -c
-      - ls -l && cat test.txt            
+      - cat testdir1/test.txt
