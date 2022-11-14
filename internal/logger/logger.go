@@ -8,23 +8,23 @@ import (
 	"github.com/fatih/color"
 )
 
-// var LwInfo *myLogWriter = NewLogWriter(func(str string, color color.Attribute) {
+// var LwInfo *MyLogWriter = NewLogWriter(func(str string, color color.Attribute) {
 // 	Custom(color, fmt.Sprintf("[%s] %s", s.Stage, str))
 // }, color.FgCyan)
 
-// var LwWhite *myLogWriter = NewLogWriter(func(str string, color color.Attribute) {
+// var LwWhite *MyLogWriter = NewLogWriter(func(str string, color color.Attribute) {
 // 	Custom(color, fmt.Sprintf("[%s] %s", s.Stage, str))
 // }, color.FgWhite)
 
-// var LwError *myLogWriter = NewLogWriter(func(str string, color color.Attribute) {
+// var LwError *MyLogWriter = NewLogWriter(func(str string, color color.Attribute) {
 // 	Custom(color, fmt.Sprintf("[%s] %s", s.Stage, str))
 // }, color.FgRed)
 
-// var LwSuccess *myLogWriter = NewLogWriter(func(str string, color color.Attribute) {
+// var LwSuccess *MyLogWriter = NewLogWriter(func(str string, color color.Attribute) {
 // 	Custom(color, fmt.Sprintf("[%s] %s", s.Stage, str))
 // }, color.FgGreen)
 
-// var LwOperation *myLogWriter = NewLogWriter(func(str string, color color.Attribute) {
+// var LwOperation *MyLogWriter = NewLogWriter(func(str string, color color.Attribute) {
 // 	Custom(color, fmt.Sprintf("[%s] %s", s.Stage, str))
 // }, color.FgYellow)
 
@@ -67,13 +67,13 @@ func Fatal(text error) {
 	c.Println(text)
 }
 
-type myLogWriter struct {
+type MyLogWriter struct {
 	logFunc func(string, color.Attribute)
 	line    string
 	color   color.Attribute
 }
 
-func (w *myLogWriter) Write(b []byte) (int, error) {
+func (w *MyLogWriter) Write(b []byte) (int, error) {
 	l := len(b)
 	for len(b) != 0 {
 		i := bytes.Index(b, []byte{'\n'})
@@ -90,8 +90,8 @@ func (w *myLogWriter) Write(b []byte) (int, error) {
 	return l, nil
 }
 
-func NewLogWriter(f func(string, color.Attribute), col color.Attribute) *myLogWriter {
-	return &myLogWriter{
+func NewLogWriter(f func(string, color.Attribute), col color.Attribute) *MyLogWriter {
+	return &MyLogWriter{
 		logFunc: f,
 		color:   col,
 	}

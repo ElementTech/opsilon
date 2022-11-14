@@ -22,6 +22,9 @@ stages:
   - stage: write a file 1
     id: writefile
     image: ubuntu:latest
+    env:
+      - name: test
+        value: hi
     if: $arg3 != ""
     script:
       - sh
@@ -34,12 +37,13 @@ stages:
       - testdir1
       - test.txt # will not exist
   - stage: write a file 2
-    needs: writefile
+    needs: writefile # will get the outputs of the stage with this ID
+    clean: true # this stage will not share a filesystem with the other stages. It will start with a clean /app as working directory.
     if: $arg4 == "runme"
     script:
       - sh
       - -c
-      - mkdir testdir2 && echo $arg2 >> testdir2/test.txt
+      - mkdir testdir2 && echo $arg4 >> testdir2/test.txt && ls -l
     artifacts:
       - testdir2
       - testdir2/test.txt

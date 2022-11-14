@@ -10,7 +10,9 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+	"unicode/utf8"
 
+	"github.com/Knetic/govaluate"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/filters"
@@ -21,6 +23,7 @@ import (
 	"github.com/fatih/color"
 	"github.com/jatalocks/opsilon/internal/logger"
 	cp "github.com/otiai10/copy"
+	"golang.org/x/exp/slices"
 )
 
 type Input struct {
@@ -31,8 +34,11 @@ type Input struct {
 
 type Stage struct {
 	Stage     string   `mapstructure:"stage"`
+	ID        string   `mapstructure:"id,omitempty"`
 	Script    []string `mapstructure:"script"`
-	If        string   `mapstructure:"if"`
+	If        string   `mapstructure:"if,omitempty"`
+	Clean     bool     `mapstructure:"clean,omitempty"`
+	Env       []Env    `mapstructure:"env,omitempty"`
 	Artifacts []string `mapstructure:"artifacts,omitempty"`
 	Image     string   `mapstructure:"image,omitempty"`
 	Needs     string   `mapstructure:"needs,omitempty"`
@@ -59,10 +65,11 @@ func GenEnv(e []Env) []string {
 	}
 	return envs
 }
-func GenEnvFromArgs(e []Input) []string {
-	envs := make([]string, len(e))
+func GenEnvFromArgs(e []Input) []Env {
+	envs := make([]Env, len(e))
 	for i, v := range e {
-		envs[i] = fmt.Sprintf("%s=%s", v.Name, v.Default)
+		envs[i].Name = v.Name
+		envs[i].Value = v.Default
 	}
 	return envs
 }
@@ -122,10 +129,8 @@ func RemoveVolume(name string, ctx context.Context, cli *client.Client) (removed
 	return true, nil
 }
 
-func RunStage(s Stage, ctx context.Context, cli *client.Client, envs []Env, inputs []Input, globalImage string, volume types.Volume, dir string, volumeOutput types.Volume, dirOutput string) {
-	LwWhite := logger.NewLogWriter(func(str string, color color.Attribute) {
-		logger.Custom(color, fmt.Sprintf("[%s] %s", s.Stage, str))
-	}, color.FgWhite)
+func RunStage(s Stage, ctx context.Context, cli *client.Client, envs []Env, globalImage string, volume types.Volume, dir string, volumeOutput types.Volume, dirOutput string, LwWhite *logger.MyLogWriter) {
+
 	PullImage(s.Image, ctx, cli)
 	if s.Image != "" {
 		globalImage = s.Image
@@ -150,10 +155,12 @@ func RunStage(s Stage, ctx context.Context, cli *client.Client, envs []Env, inpu
 	// }
 
 	hostConfig.Mounts = mounts
-
+	allEnvs := GenEnv(envs)
+	LwWhite.Write([]byte(fmt.Sprintf("Running Stage with the following variables: %s\n", allEnvs)))
+	allEnvs = append(allEnvs, []string{fmt.Sprintf("OUTPUT=/output/output")}...)
 	resp, err := cli.ContainerCreate(ctx, &container.Config{
 		Image:      globalImage,
-		Env:        append([]string{fmt.Sprintf("OUTPUT=/output/output")}, append(GenEnv(envs), GenEnvFromArgs(inputs)...)...),
+		Env:        allEnvs,
 		Cmd:        s.Script,
 		WorkingDir: "/app",
 		Tty:        false,
@@ -194,10 +201,8 @@ func PullImage(image string, ctx context.Context, cli *client.Client) {
 	}
 }
 
-type AppConfigProperties map[string]string
-
-func ReadPropertiesFile(filename string) (AppConfigProperties, error) {
-	config := AppConfigProperties{}
+func ReadPropertiesFile(filename string) ([]Env, error) {
+	config := []Env{}
 
 	if len(filename) == 0 {
 		return config, nil
@@ -218,7 +223,7 @@ func ReadPropertiesFile(filename string) (AppConfigProperties, error) {
 				if len(line) > equal {
 					value = strings.TrimSpace(line[equal+1:])
 				}
-				config[key] = value
+				config = append(config, Env{Name: key, Value: value})
 			}
 		}
 	}
@@ -239,7 +244,62 @@ func Engine(w Workflow) {
 
 	PullImage(w.Image, ctx, cli)
 
-	dir, err := os.MkdirTemp("", "app")
+	vol, dir := createVolume(cli, ctx)
+
+	defer RemoveVolume(vol.Name, ctx, cli)
+	defer os.RemoveAll(dir)
+
+	allOutputs := make(map[string][]Env, 0)
+
+	for _, stage := range w.Stages {
+
+		volOutput, dirOutput := createVolume(cli, ctx)
+		outputPath := path.Join(dirOutput, "output")
+		_, err := os.Create(outputPath)
+		logger.HandleErr(err)
+
+		defer RemoveVolume(volOutput.Name, ctx, cli)
+		defer os.RemoveAll(dirOutput)
+
+		allEnvs := append(w.Env, stage.Env...)
+		allEnvs = append(allEnvs, GenEnvFromArgs(w.Input)...)
+		if stage.Needs != "" {
+			if val, ok := allOutputs[stage.Needs]; ok {
+				allEnvs = append(allEnvs, val...)
+			}
+		}
+		LwWhite := logger.NewLogWriter(func(str string, color color.Attribute) {
+			logger.Custom(color, fmt.Sprintf("[%s] %s", stage.Stage, str))
+		}, color.FgWhite)
+
+		LwCrossed := log.New(logger.NewLogWriter(func(str string, col color.Attribute) {
+			colFuc := color.New(col).SprintFunc()
+			white := color.New(color.CrossedOut).SprintFunc()
+			logger.Free(white(fmt.Sprintf("[%s] ", stage.Stage), colFuc(str)))
+		}, color.BgYellow), "", 0)
+
+		if !evaluateCondition(stage.If, allEnvs, LwWhite) {
+			LwCrossed.Println("Stage Skipped due to IF condition")
+		} else {
+			if stage.Clean {
+				volClean, dirClean := createVolume(cli, ctx)
+				RunStage(stage, ctx, cli, allEnvs, w.Image, volClean, dirClean, volOutput, dirOutput, LwWhite)
+			} else {
+				RunStage(stage, ctx, cli, allEnvs, w.Image, vol, dir, volOutput, dirOutput, LwWhite)
+			}
+
+		}
+
+		outputMap, err := ReadPropertiesFile(outputPath)
+		logger.HandleErr(err)
+		allOutputs[stage.ID] = outputMap
+
+	}
+
+}
+
+func createVolume(cli *client.Client, ctx context.Context) (vol types.Volume, dir string) {
+	dir, err := os.MkdirTemp("", "temp")
 	logger.HandleErr(err)
 
 	vol, err2 := cli.VolumeCreate(ctx, volume.VolumeCreateBody{
@@ -250,46 +310,52 @@ func Engine(w Workflow) {
 			"o":      "bind",
 		},
 	})
-	if err2 != nil {
-		panic(err2)
+	logger.HandleErr(err2)
+	return vol, dir
+}
+
+func trimFirstRune(s string) string {
+	_, i := utf8.DecodeRuneInString(s)
+	return s[i:]
+}
+
+func getVariablesFromExpression(condition string) []string {
+	fields := strings.Fields(condition)
+	varList := make([]string, 0)
+	for _, v := range fields {
+		if strings.HasPrefix(v, "$") {
+			varList = append(varList, strings.ReplaceAll(trimFirstRune(v), " ", ""))
+		}
 	}
+	return varList
+}
 
-	defer RemoveVolume(vol.Name, ctx, cli)
-	defer os.RemoveAll(dir)
+func evaluateCondition(condition string, availableValues []Env, LwWhite *logger.MyLogWriter) bool {
+	if condition != "" {
+		LwWhite.Write([]byte(fmt.Sprintf("Evaluating If Statement: %s, with the following variables: %s\n", condition, availableValues)))
 
-	for _, stage := range w.Stages {
-		logger.Info(stage.If)
+		varList := getVariablesFromExpression(condition)
 
-		dirOutput, err := os.MkdirTemp("", "output")
+		parameters := make(map[string]interface{}, len(varList))
+
+		for _, v := range varList {
+			idx := slices.IndexFunc(availableValues, func(c Env) bool { return c.Name == v })
+			if idx == -1 {
+				// Not all variables can be populated. Thus the If statement is void.
+				return false
+			} else {
+				parameters[v] = availableValues[idx].Value
+			}
+		}
+
+		expression, err := govaluate.NewEvaluableExpression(strings.ReplaceAll(condition, "$", ""))
 		logger.HandleErr(err)
-		outputPath := path.Join(dirOutput, "output")
-		outputFile, err := os.Create(outputPath)
-		if err != nil {
-			log.Fatal(err, outputFile)
-		}
 
-		volOutput, err2 := cli.VolumeCreate(ctx, volume.VolumeCreateBody{
-			Driver: "local",
-			DriverOpts: map[string]string{
-				"type":   "none",
-				"device": dirOutput,
-				"o":      "bind",
-			},
-		})
-		if err2 != nil {
-			panic(err2)
-		}
-
-		defer RemoveVolume(volOutput.Name, ctx, cli)
-		defer os.RemoveAll(dirOutput)
-
-		RunStage(stage, ctx, cli, w.Env, w.Input, w.Image, vol, dir, volOutput, dirOutput)
-
-		// outputMap, err := ReadPropertiesFile(outputPath)
-		// logger.HandleErr(err)
-
+		result, err := expression.Evaluate(parameters)
+		logger.HandleErr(err)
+		return result.(bool)
 	}
-
+	return true
 }
 
 func extractArtifacts(path string, s Stage) {
