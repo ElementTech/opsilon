@@ -7,13 +7,13 @@ import (
 )
 
 type Location struct {
-	Path string `mapstructure:"path"`
-	Type string `mapstructure:"type"`
+	Path string `mapstructure:"path" validate:"nonzero"`
+	Type string `mapstructure:"type" validate:"nonzero"`
 }
 
 type Action struct {
-	Name     string          `mapstructure:"name"`
-	Location Location        `mapstructure:"location"`
+	Name     string          `mapstructure:"name" validate:"nonzero"`
+	Location Location        `mapstructure:"location" validate:"nonzero"`
 	Workflow engine.Workflow `mapstructure:"workflow,omitempty"`
 }
 

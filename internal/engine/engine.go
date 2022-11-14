@@ -28,15 +28,15 @@ import (
 )
 
 type Input struct {
-	Name     string `mapstructure:"name"`
+	Name     string `mapstructure:"name" validate:"nonzero"`
 	Default  string `mapstructure:"default"`
 	Optional bool   `mapstructure:"optional,omitempty"`
 }
 
 type Stage struct {
-	Stage     string   `mapstructure:"stage"`
-	ID        string   `mapstructure:"id,omitempty"`
-	Script    []string `mapstructure:"script"`
+	Stage     string   `mapstructure:"stage" validate:"nonzero"`
+	ID        string   `mapstructure:"id,omitempty" validate:"nonzero"`
+	Script    []string `mapstructure:"script" validate:"nonzero"`
 	If        string   `mapstructure:"if,omitempty"`
 	Clean     bool     `mapstructure:"clean,omitempty"`
 	Env       []Env    `mapstructure:"env,omitempty"`
@@ -46,17 +46,17 @@ type Stage struct {
 }
 
 type Env struct {
-	Name  string `mapstructure:"name"`
-	Value string `mapstructure:"value"`
+	Name  string `mapstructure:"name" validate:"nonzero"`
+	Value string `mapstructure:"value" validate:"nonzero"`
 }
 
 type Workflow struct {
-	ID          string  `mapstructure:"id"`
-	Image       string  `mapstructure:"image"`
+	ID          string  `mapstructure:"id" validate:"nonzero"`
+	Image       string  `mapstructure:"image" validate:"nonzero"`
 	Description string  `mapstructure:"description"`
 	Env         []Env   `mapstructure:"env"`
 	Input       []Input `mapstructure:"input"`
-	Stages      []Stage `mapstructure:"stages"`
+	Stages      []Stage `mapstructure:"stages" validate:"nonzero"`
 }
 
 func GenEnv(e []Env) []string {

@@ -15,6 +15,7 @@ import (
 
 func Select() {
 	actions := utils.ConfigPopulateWorkflows()
+
 	templates := &promptui.SelectTemplates{
 		Label:    "{{ . }}",
 		Active:   "\u25B6\uFE0F {{ .Name | cyan }} ({{ .Workflow.Description | green }})",
@@ -38,7 +39,6 @@ func Select() {
 	toRun, err := utils.Confirm(chosenAct)
 	logger.HandleErr(err)
 	if toRun {
-		// engine.Engine(chosenAct.Workflow)
 		engine.ToGraph(chosenAct.Workflow)
 	} else {
 		fmt.Println("Run Canceled")

@@ -12,6 +12,7 @@ import (
 	"github.com/jatalocks/opsilon/internal/config"
 	"github.com/jatalocks/opsilon/internal/engine"
 	"github.com/jatalocks/opsilon/internal/logger"
+	"github.com/jatalocks/opsilon/internal/validate"
 	"github.com/manifoldco/promptui"
 	"github.com/spf13/viper"
 	"gopkg.in/yaml.v3"
@@ -50,6 +51,9 @@ func ConfigPopulateWorkflows() []config.Action {
 	for i, v := range data {
 		data[i].Workflow = *getWorkflow(v.Location)
 	}
+
+	validate.ValidatePopulatedActionFile(&data)
+
 	return data
 }
 
