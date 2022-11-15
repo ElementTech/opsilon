@@ -46,8 +46,8 @@ func init() {
 	addCmd.Flags().BoolVar(&gitType, "git", false, "Repo of type Git")
 	addCmd.MarkFlagsMutuallyExclusive("folder", "git")
 	addCmd.Flags().StringVarP(&location.Path, "path", "p", "", "Path/URL")
-	addCmd.Flags().StringVarP(&location.Subfolder, "subfolder", "s", "", "Subfolder Path")
-	addCmd.Flags().StringVarP(&location.Branch, "branch", "b", "", "Branch Name")
+	addCmd.Flags().StringVarP(&location.Subfolder, "subfolder", "s", "", "Subfolder Path (git only)")
+	addCmd.Flags().StringVarP(&location.Branch, "branch", "b", "", "Branch Name (git only)")
 	addCmd.MarkFlagsMutuallyExclusive("folder", "subfolder")
 	addCmd.MarkFlagsMutuallyExclusive("folder", "branch")
 

@@ -20,7 +20,7 @@ var deleteCmd = &cobra.Command{
 
 func init() {
 	repoCmd.AddCommand(deleteCmd)
-	deleteCmd.Flags().StringSliceVarP(&repoList, "repo", "r", nil, "Comma seperated list of repositories to fetch workflows from.")
+	deleteCmd.Flags().StringSliceVarP(&repoList, "repo", "r", nil, "Comma seperated list of repositories to delete from your configuration")
 
 	// Here you will define your flags and configuration settings.
 

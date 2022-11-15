@@ -29,7 +29,7 @@ func init() {
 
 	// Cobra supports Persistent Flags which will work for this command
 	// and all subcommands, e.g.:
-	listCmd.Flags().StringSliceVarP(&repoList, "repo", "r", nil, "Comma seperated list of repositories to fetch workflows from.")
+	listCmd.Flags().StringSliceVarP(&repoList, "repo", "r", nil, "Comma seperated list of repositories to fetch workflows from")
 
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
