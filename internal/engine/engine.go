@@ -57,6 +57,7 @@ type Workflow struct {
 	Env         []Env   `mapstructure:"env"`
 	Input       []Input `mapstructure:"input"`
 	Stages      []Stage `mapstructure:"stages" validate:"nonzero"`
+	Repo        string  `mapstructure:"repository,omitempty"` // To be filled automatically. Not part of YAML.
 }
 
 func GenEnv(e []Env) []string {

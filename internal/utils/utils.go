@@ -16,7 +16,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-func getWorkflows(location config.Location) *[]engine.Workflow {
+func getWorkflows(location config.Location, repo string) *[]engine.Workflow {
 	data := []engine.Workflow{}
 	if location.Type == "folder" {
 		if location.Path[0:1] == "/" {
@@ -31,8 +31,10 @@ func getWorkflows(location config.Location) *[]engine.Workflow {
 						yfile, err := ioutil.ReadFile(path)
 						logger.HandleErr(err)
 						temp := engine.Workflow{}
+						temp.Repo = repo
 						err2 := yaml.Unmarshal(yfile, &temp)
 						logger.HandleErr(err2)
+
 						data = append(data, temp)
 					}
 
@@ -65,15 +67,6 @@ func getWorkflows(location config.Location) *[]engine.Workflow {
 	return &data
 }
 
-func stringInSlice(a string, list []string) bool {
-	for _, b := range list {
-		if b == a {
-			return true
-		}
-	}
-	return false
-}
-
 func GetWorkflowsForRepo(repoList []string) []engine.Workflow {
 	data := config.GetConfig()
 	workflowArray := []engine.Workflow{}
@@ -84,13 +77,13 @@ func GetWorkflowsForRepo(repoList []string) []engine.Workflow {
 	for _, v := range data {
 		if skipRepoCheck {
 			logger.Info("Repository", v.Name)
-			w := *getWorkflows(v.Location)
+			w := *getWorkflows(v.Location, v.Name)
 			validate.ValidateWorkflows(&w)
 			workflowArray = append(workflowArray, w...)
 		} else {
-			if stringInSlice(v.Name, repoList) {
+			if config.StringInSlice(v.Name, repoList) {
 				logger.Info("Repository", v.Name)
-				w := *getWorkflows(v.Location)
+				w := *getWorkflows(v.Location, v.Name)
 				validate.ValidateWorkflows(&w)
 				workflowArray = append(workflowArray, w...)
 			}
