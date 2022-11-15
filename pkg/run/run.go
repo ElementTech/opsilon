@@ -8,6 +8,7 @@ import (
 	"github.com/fatih/color"
 	"github.com/jatalocks/opsilon/internal/config"
 	"github.com/jatalocks/opsilon/internal/engine"
+	"github.com/jatalocks/opsilon/internal/get"
 	"github.com/jatalocks/opsilon/internal/logger"
 	"github.com/jatalocks/opsilon/internal/utils"
 	"github.com/manifoldco/promptui"
@@ -22,8 +23,8 @@ func Select() {
 	iR, _, err := promptRepo.Run()
 	logger.HandleErr(err)
 	chosenRepo := repoList[iR]
-	workflows := utils.GetWorkflowsForRepo([]string{chosenRepo})
-
+	workflows, err := get.GetWorkflowsForRepo([]string{chosenRepo})
+	logger.HandleErr(err)
 	templates := &promptui.SelectTemplates{
 		Label:    "{{ . }}",
 		Active:   "\u25B6\uFE0F {{ .ID | cyan }} ({{ .Description | green }})",

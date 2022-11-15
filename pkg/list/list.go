@@ -2,9 +2,12 @@ package list
 
 import (
 	"github.com/jatalocks/opsilon/internal/config"
-	"github.com/jatalocks/opsilon/internal/utils"
+	"github.com/jatalocks/opsilon/internal/get"
+	"github.com/jatalocks/opsilon/internal/logger"
 )
 
 func List(repoList []string) {
-	config.PrintWorkflows(utils.GetWorkflowsForRepo(repoList))
+	w, err := get.GetWorkflowsForRepo(repoList)
+	logger.HandleErr(err)
+	config.PrintWorkflows(w)
 }

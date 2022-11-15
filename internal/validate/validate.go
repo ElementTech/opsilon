@@ -30,6 +30,7 @@ func ValidateRepoFile(w *config.RepoFile) {
 		logger.Error(errs.Error())
 		os.Exit(1)
 	}
+
 }
 
 func ValidateRepo(w *config.Repo) {
