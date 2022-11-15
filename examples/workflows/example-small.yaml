@@ -1,0 +1,40 @@
+# ID of job
+id: example-small
+
+# Help Description
+description: this is an example workflow which contains some of opsilons capabilities
+
+# Global Docker Image. Used if no Stage specific image is specified.
+image: alpine:latest
+
+# Global Environment Variables for use inside the containers.
+env:
+  - name: testkey
+    value: testvalue
+
+# Inputs for users to enter in the CLI when using 'run'
+input:
+  - name: myinput
+    optional: true # If skipped in the CLI input phase, will default to an empty string [($arg3 == "") == true]
+
+# Stages Rules
+# 1. All stages will run in parallel unless they have a "needs" field
+stages:
+  - stage: do something # Name of the stage. These can be non-unique.
+    id: stageid # ID of the stage. Used for 'outputs' and 'needs'. These need to be unique.
+    image: ubuntu:latest # Override global image for this stage only.
+    env: # Stage specific environment variables
+      - name: onlyhere
+        value: something
+    # 'If' statements support normal mathematical expressions. 
+    # Variables can be any variable available to the stage (Using '$' sign).
+    if: $myinput != "" # Skip if myinput is empty. Run if not. 
+    script: # Array of arguments to the container. $OUTPUT contains an output file. every key=value here will be available for export.
+      - sh
+      - -c
+      - |
+        echo "myoutput=$onlyhere" >> $OUTPUT
+        mkdir artifact_dir
+        echo $myinput >> artifact_dir/$testkey.txt
+    artifacts: # Will be saved to the Working Directory where opsilon CLI was run from.
+      - artifact_dir

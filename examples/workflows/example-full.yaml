@@ -1,8 +1,8 @@
 # ID of job
-id: example
+id: example-full
 
 # Help Description
-description: this is an example workflow which includes all of opsilon capabilities
+description: this is an example workflow which includes all of opsilons capabilities
 
 # Global Docker Image. Used if no Stage specific image is specified.
 image: alpine:latest
