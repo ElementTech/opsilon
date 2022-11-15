@@ -3,13 +3,15 @@ package get
 import (
 	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
 
-	"github.com/go-git/go-git/plumbing/object"
 	"github.com/go-git/go-git/v5"
+	"github.com/go-git/go-git/v5/plumbing"
+	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/go-git/go-git/v5/storage/memory"
 	"github.com/jatalocks/opsilon/internal/config"
 	"github.com/jatalocks/opsilon/internal/engine"
@@ -82,29 +84,33 @@ func getWorkflows(location config.Location, repo string) *[]engine.Workflow {
 		CheckArgs(location.Path)
 
 		r, err := git.Clone(memory.NewStorage(), nil, &git.CloneOptions{
-			URL: location.Path,
+			URL:           location.Path,
+			ReferenceName: plumbing.ReferenceName(fmt.Sprintf("refs/heads/%s", location.Branch)),
+			SingleBranch:  true,
 		})
-
-		CheckIfError(err)
-
 		// ... retrieving the branch being pointed by HEAD
 		ref, err := r.Head()
 		CheckIfError(err)
 
-		// ... retrieving the commit object
-		tree, err := r.TreeObjects()
-		CheckIfError(err)
-
-		tree.ForEach(func(f *object.File) error {
-			files = append(files, f.Name)
-			return nil
-		})
-
 		commit, err := r.CommitObject(ref.Hash())
 		CheckIfError(err)
 
-		fmt.Println(commit)
-
+		tree, err := commit.Tree()
+		CheckIfError(err)
+		tree.Files().ForEach(func(f *object.File) error {
+			if strings.Contains(f.Name, location.Subfolder) && (strings.Contains(f.Name, "yaml") || strings.Contains(f.Name, "yml")) {
+				fReader, err := f.Blob.Reader()
+				CheckIfError(err)
+				bytes, err := io.ReadAll(fReader)
+				CheckIfError(err)
+				temp := engine.Workflow{}
+				temp.Repo = repo
+				err2 := yaml.Unmarshal(bytes, &temp)
+				logger.HandleErr(err2)
+				data = append(data, temp)
+			}
+			return nil
+		})
 	}
 
 	// else {
