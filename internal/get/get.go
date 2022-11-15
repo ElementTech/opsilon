@@ -76,11 +76,15 @@ func getWorkflows(location config.Location, repo string) (*[]engine.Workflow, er
 					}
 					if !info.IsDir() {
 						yfile, err := ioutil.ReadFile(path)
-						logger.HandleErr(err)
+						if err != nil {
+							return err
+						}
 						temp := engine.Workflow{}
 						temp.Repo = repo
 						err2 := yaml.Unmarshal(yfile, &temp)
-						logger.HandleErr(err2)
+						if err2 != nil {
+							return err2
+						}
 
 						data = append(data, temp)
 					}

@@ -12,45 +12,91 @@ import (
 	"github.com/jatalocks/opsilon/internal/logger"
 	"github.com/jatalocks/opsilon/internal/utils"
 	"github.com/manifoldco/promptui"
+	"golang.org/x/exp/slices"
 )
 
-func Select() {
+func Select(repoName string, workflowName string, args map[string]string, confirm bool) {
 	repoList := config.GetRepoList()
-	promptRepo := &promptui.Select{
-		Label: "Select Repo",
-		Items: repoList,
+	chosenRepo := repoName
+	if repoName == "" {
+		promptRepo := &promptui.Select{
+			Label: "Select Repo",
+			Items: repoList,
+		}
+		iR, _, err := promptRepo.Run()
+		logger.HandleErr(err)
+		chosenRepo = repoList[iR]
+	} else {
+		if !slices.Contains(repoList, chosenRepo) {
+			logger.Error(fmt.Sprint("Repo ", chosenRepo, "is not in repository list - To view all, run opsilon repo list."))
+			os.Exit(1)
+		}
 	}
-	iR, _, err := promptRepo.Run()
-	logger.HandleErr(err)
-	chosenRepo := repoList[iR]
 	workflows, err := get.GetWorkflowsForRepo([]string{chosenRepo})
 	logger.HandleErr(err)
-	templates := &promptui.SelectTemplates{
-		Label:    "{{ . }}",
-		Active:   "\u25B6\uFE0F {{ .ID | cyan }} ({{ .Description | green }})",
-		Inactive: "  {{ .ID | cyan }} ({{ .Description | yellow }})",
-		Selected: "\u25B6\uFE0F {{ .ID | cyan }}",
+	wFound := false
+	chosenAct := engine.Workflow{}
+	if workflowName != "" {
+		for _, v := range workflows {
+			if v.ID == workflowName {
+				wFound = true
+				chosenAct = v
+			}
+		}
+		if !wFound {
+			logger.Error(fmt.Sprint("Worklow ", workflowName, "not found in repository", chosenRepo, " - To view all, run opsilon list."))
+			os.Exit(1)
+		}
+	} else {
+		templates := &promptui.SelectTemplates{
+			Label:    "{{ . }}",
+			Active:   "\u25B6\uFE0F {{ .ID | cyan }} ({{ .Description | green }})",
+			Inactive: "  {{ .ID | cyan }} ({{ .Description | yellow }})",
+			Selected: "\u25B6\uFE0F {{ .ID | cyan }}",
+		}
+
+		prompt := &promptui.Select{
+			Label:     "Select Workflow",
+			Items:     workflows,
+			Templates: templates,
+		}
+
+		i, _, err := prompt.Run()
+
+		logger.HandleErr(err)
+		chosenAct = workflows[i]
 	}
 
-	prompt := &promptui.Select{
-		Label:     "Select Workflow",
-		Items:     workflows,
-		Templates: templates,
-	}
-
-	i, _, err := prompt.Run()
-
-	logger.HandleErr(err)
-	chosenAct := workflows[i]
 	cyan := color.New(color.FgCyan).SprintFunc()
 	fmt.Printf("You Chose: %s\n", cyan(chosenAct.ID))
-	PromptArguments(&chosenAct)
-	toRun, err := utils.Confirm(chosenAct)
-	logger.HandleErr(err)
+	if len(args) == 0 {
+		PromptArguments(&chosenAct)
+	} else {
+		inputArgsIntoWorklow(args, &chosenAct)
+	}
+	toRun := confirm
+	if !toRun {
+		toRun, err = utils.Confirm(chosenAct)
+		logger.HandleErr(err)
+	}
 	if toRun {
 		engine.ToGraph(chosenAct)
 	} else {
 		fmt.Println("Run Canceled")
+	}
+}
+
+func inputArgsIntoWorklow(m map[string]string, act *engine.Workflow) {
+	argsWithValues := act.Input
+	for i, input := range argsWithValues {
+		if val, ok := m[input.Name]; ok {
+			argsWithValues[i].Default = val
+		} else {
+			if !input.Optional {
+				logger.Error("Input", input.Name, "is mandatory but none was provided.")
+				os.Exit(1)
+			}
+		}
 	}
 }
 
