@@ -271,11 +271,11 @@ func Engine(cli *client.Client, ctx context.Context, w Workflow, sID string, vol
 	}, color.BgYellow), "", 0)
 
 	if !evaluateCondition(stage.If, allEnvs, LwWhite) {
-		skippedStages = append(skippedStages, stage.ID)
+		*skippedStages = append(*skippedStages, stage.ID)
 		LwCrossed.Println("Stage Skipped due to IF condition")
 	} else {
 		toSkip := false
-		for _, skipped := range skippedStages {
+		for _, skipped := range *skippedStages {
 			for _, need := range needSplit {
 				if need == skipped {
 					toSkip = true
@@ -283,7 +283,7 @@ func Engine(cli *client.Client, ctx context.Context, w Workflow, sID string, vol
 			}
 		}
 		if toSkip {
-			skippedStages = append(skippedStages, stage.ID)
+			*skippedStages = append(*skippedStages, stage.ID)
 			LwCrossed.Println("Stage Skipped due to needed stage skipped")
 		} else {
 			if stage.Clean {
