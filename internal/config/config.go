@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"strconv"
 	"strings"
@@ -10,6 +11,7 @@ import (
 	"github.com/jatalocks/opsilon/internal/logger"
 	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/viper"
+	"gopkg.in/yaml.v2"
 )
 
 type Location struct {
@@ -93,6 +95,26 @@ func GetConfig() []Repo {
 	err2 := viper.Unmarshal(&C)
 	logger.HandleErr(err2)
 	return C.Repositories
+}
+func GetConfigFile() *RepoFile {
+	err2 := viper.Unmarshal(&C)
+	logger.HandleErr(err2)
+	return &C
+}
+
+func SaveToConfig(r RepoFile) {
+	file, err := os.OpenFile(viper.ConfigFileUsed(), os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
+	if err != nil {
+		log.Fatalf("error opening/creating file: %v", err)
+	}
+	defer file.Close()
+
+	enc := yaml.NewEncoder(file)
+
+	err = enc.Encode(r)
+	if err != nil {
+		log.Fatalf("error encoding: %v", err)
+	}
 }
 
 func GetRepoList() []string {

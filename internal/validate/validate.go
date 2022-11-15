@@ -23,7 +23,16 @@ func noWhiteSpace(v interface{}, param string) error {
 	return nil
 }
 
-func ValidateRepoFile(w *[]config.RepoFile) {
+func ValidateRepoFile(w *config.RepoFile) {
+	validator.SetValidationFunc("nowhitespace", noWhiteSpace)
+	if errs := validator.Validate(&w); errs != nil {
+		logger.Operation("Your Repo Config file has Problems:")
+		logger.Error(errs.Error())
+		os.Exit(1)
+	}
+}
+
+func ValidateRepo(w *config.Repo) {
 	validator.SetValidationFunc("nowhitespace", noWhiteSpace)
 	if errs := validator.Validate(&w); errs != nil {
 		logger.Operation("Your Repo Config file has Problems:")
