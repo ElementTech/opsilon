@@ -37,12 +37,12 @@ func PrintRepos(repos []Repo) {
 	var data [][]string
 
 	for _, r := range repos {
-		row := []string{r.Name, r.Description, r.Location.Path, r.Location.Type}
+		row := []string{r.Name, r.Description, r.Location.Path, r.Location.Type, r.Location.Branch, r.Location.Subfolder}
 		data = append(data, row)
 	}
 
 	table := tablewriter.NewWriter(os.Stdout)
-	table.SetHeader([]string{"Name", "Description", "Path", "Type"})
+	table.SetHeader([]string{"Name", "Description", "Path/URL", "Type", "Branch", "Subfolder"})
 
 	for _, v := range data {
 		table.Append(v)

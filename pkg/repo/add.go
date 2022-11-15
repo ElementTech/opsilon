@@ -12,9 +12,10 @@ import (
 	"github.com/spf13/viper"
 )
 
-func PromptString(str *string, label string, validate promptui.ValidateFunc) {
+func PromptString(str *string, label string, validate promptui.ValidateFunc, def string) {
 	prompt := promptui.Prompt{
 		Label:    label,
+		Default:  def,
 		Validate: validate,
 	}
 	result, err := prompt.Run()
@@ -38,18 +39,35 @@ func Add() {
 		}
 		return nil
 
-	})
-	PromptString(&repo.Description, "Description", func(input string) error { return nil })
-
+	}, "")
+	PromptString(&repo.Description, "Description", func(input string) error { return nil }, "")
+	options := []string{"git", "folder"}
 	promptType := &promptui.Select{
 		Label: "Select Repo Type",
-		Items: []string{"folder"},
+		Items: options,
 	}
 	i, _, err := promptType.Run()
 	logger.HandleErr(err)
-	repo.Location.Type = []string{"folder"}[i]
+	repo.Location.Type = options[i]
+	switch repo.Location.Type {
+	case "folder":
+		PromptString(&repo.Location.Path, "Folder Path", func(input string) error {
+			if input == "" {
+				return errors.New("folder path cannot be blank")
+			}
+			return nil
+		}, "")
+	case "git":
+		PromptString(&repo.Location.Path, "Git URL", func(input string) error {
+			if input == "" {
+				return errors.New("URL cannot be blank")
+			}
+			return nil
 
-	PromptString(&repo.Location.Path, "Path", func(input string) error { return nil })
+		}, "")
+		PromptString(&repo.Location.Branch, "Branch (Optional)", func(input string) error { return nil }, "")
+		PromptString(&repo.Location.Subfolder, "Subfolder (Optional)", func(input string) error { return nil }, "")
+	}
 	validate.ValidateRepo(&repo)
 	fileConfig := config.GetConfigFile()
 	fileConfig.Repositories = append(fileConfig.Repositories, repo)
@@ -63,7 +81,7 @@ func Add() {
 	_, err = get.GetWorkflowsForRepo([]string{repo.Name})
 	if err != nil {
 		Delete([]string{repo.Name})
-		logger.HandleErr(err)
+		get.CheckIfError(err)
 	}
 	List()
 }

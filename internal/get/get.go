@@ -49,7 +49,21 @@ func Warning(format string, args ...interface{}) {
 	fmt.Printf("\x1b[36;1m%s\x1b[0m\n", fmt.Sprintf(format, args...))
 }
 
-func getWorkflows(location config.Location, repo string) *[]engine.Workflow {
+func gitCloneMemory(loc config.Location) (*git.Repository, error) {
+	if loc.Branch != "" {
+		return git.Clone(memory.NewStorage(), nil, &git.CloneOptions{
+			URL:           loc.Path,
+			ReferenceName: plumbing.ReferenceName(fmt.Sprintf("refs/heads/%s", loc.Branch)),
+			SingleBranch:  true,
+		})
+	} else {
+		return git.Clone(memory.NewStorage(), nil, &git.CloneOptions{
+			URL: loc.Path,
+		})
+	}
+}
+
+func getWorkflows(location config.Location, repo string) (*[]engine.Workflow, error) {
 	data := []engine.Workflow{}
 	logger.Operation("Getting workflows from repo", repo, "in location", location.Path, "type", location.Type)
 	if location.Type == "folder" {
@@ -60,7 +74,6 @@ func getWorkflows(location config.Location, repo string) *[]engine.Workflow {
 					if err != nil {
 						return err
 					}
-
 					if !info.IsDir() {
 						yfile, err := ioutil.ReadFile(path)
 						logger.HandleErr(err)
@@ -72,45 +85,59 @@ func getWorkflows(location config.Location, repo string) *[]engine.Workflow {
 						data = append(data, temp)
 					}
 
-					return nil
+					return err
 				})
 			if err != nil {
-				logger.Fatal(err)
+				return nil, err
 			}
 
 		}
 	} else if location.Type == "git" {
 
 		CheckArgs(location.Path)
-
-		r, err := git.Clone(memory.NewStorage(), nil, &git.CloneOptions{
-			URL:           location.Path,
-			ReferenceName: plumbing.ReferenceName(fmt.Sprintf("refs/heads/%s", location.Branch)),
-			SingleBranch:  true,
-		})
+		r, err := gitCloneMemory(location)
+		if err != nil {
+			return nil, err
+		}
 		// ... retrieving the branch being pointed by HEAD
 		ref, err := r.Head()
-		CheckIfError(err)
+		if err != nil {
+			return nil, err
+		}
 
 		commit, err := r.CommitObject(ref.Hash())
-		CheckIfError(err)
+		if err != nil {
+			return nil, err
+		}
 
 		tree, err := commit.Tree()
-		CheckIfError(err)
+		if err != nil {
+			return nil, err
+		}
+		globalErr := *new(error)
 		tree.Files().ForEach(func(f *object.File) error {
 			if strings.Contains(f.Name, location.Subfolder) && (strings.Contains(f.Name, "yaml") || strings.Contains(f.Name, "yml")) {
 				fReader, err := f.Blob.Reader()
-				CheckIfError(err)
+				if err != nil {
+					globalErr = err
+				}
 				bytes, err := io.ReadAll(fReader)
-				CheckIfError(err)
+				if err != nil {
+					globalErr = err
+				}
 				temp := engine.Workflow{}
 				temp.Repo = repo
 				err2 := yaml.Unmarshal(bytes, &temp)
-				logger.HandleErr(err2)
+				if err2 != nil {
+					globalErr = err
+				}
 				data = append(data, temp)
 			}
 			return nil
 		})
+		if globalErr != nil {
+			return nil, globalErr
+		}
 	}
 
 	// else {
@@ -130,17 +157,20 @@ func getWorkflows(location config.Location, repo string) *[]engine.Workflow {
 	// 	err3 := yaml.Unmarshal(buf.Bytes(), &data)
 	// 	logger.HandleErr(err3)
 	// }
-	return &data
+	return &data, nil
 }
 
 func appendToWArray(v config.Repo, workflowArray *[]engine.Workflow) error {
 	logger.Info("Repository", v.Name)
-	w := *getWorkflows(v.Location, v.Name)
-	validate.ValidateWorkflows(&w)
-	if len(w) == 0 {
+	w, err := getWorkflows(v.Location, v.Name)
+	if err != nil {
+		return err
+	}
+	validate.ValidateWorkflows(w)
+	if len(*w) == 0 {
 		return errors.New("Cannot fetch workflows from repository " + v.Name + " or it is empty.")
 	}
-	*workflowArray = append(*workflowArray, w...)
+	*workflowArray = append(*workflowArray, *w...)
 	return nil
 }
 func GetWorkflowsForRepo(repoList []string) ([]engine.Workflow, error) {
