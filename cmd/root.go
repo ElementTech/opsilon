@@ -61,6 +61,8 @@ func initConfig() {
 		viper.AddConfigPath(home)
 		viper.SetConfigType("yaml")
 		viper.SetConfigName(".opsilon")
+		viper.SafeWriteConfig()
+
 	}
 
 	viper.AutomaticEnv() // read in environment variables that match
