@@ -67,6 +67,7 @@ func GenEnv(e []Env) []string {
 	}
 	return envs
 }
+
 func GenEnvFromArgs(e []Input) []Env {
 	envs := make([]Env, len(e))
 	for i, v := range e {
@@ -77,7 +78,6 @@ func GenEnvFromArgs(e []Input) []Env {
 }
 
 func ImageExists(image string, ctx context.Context, cli *client.Client) bool {
-
 	images, err := cli.ImageList(ctx, types.ImageListOptions{})
 	logger.HandleErr(err)
 
@@ -91,7 +91,6 @@ func ImageExists(image string, ctx context.Context, cli *client.Client) bool {
 }
 
 func ContainerClean(id string, ctx context.Context, cli *client.Client) {
-
 	err := cli.ContainerRemove(ctx, id, types.ContainerRemoveOptions{})
 
 	logger.HandleErr(err)
@@ -99,7 +98,6 @@ func ContainerClean(id string, ctx context.Context, cli *client.Client) {
 
 func FindVolume(name string, ctx context.Context, cli *client.Client) (volume *types.Volume, err error) {
 	volumes, err := cli.VolumeList(ctx, filters.NewArgs())
-
 	if err != nil {
 		return nil, err
 	}
@@ -111,9 +109,9 @@ func FindVolume(name string, ctx context.Context, cli *client.Client) (volume *t
 	}
 	return nil, nil
 }
+
 func RemoveVolume(name string, ctx context.Context, cli *client.Client) (removed bool, err error) {
 	vol, err := FindVolume(name, ctx, cli)
-
 	if err != nil {
 		return false, err
 	}
@@ -132,7 +130,6 @@ func RemoveVolume(name string, ctx context.Context, cli *client.Client) (removed
 }
 
 func RunStage(s Stage, ctx context.Context, cli *client.Client, envs []Env, globalImage string, volume types.Volume, dir string, volumeOutput types.Volume, dirOutput string, LwWhite *logger.MyLogWriter) {
-
 	PullImage(s.Image, ctx, cli)
 	if s.Image != "" {
 		globalImage = s.Image
@@ -187,7 +184,6 @@ func RunStage(s Stage, ctx context.Context, cli *client.Client, envs []Env, glob
 	logger.HandleErr(err)
 
 	stdcopy.StdCopy(LwWhite, LwWhite, out)
-
 }
 
 func PullImage(image string, ctx context.Context, cli *client.Client) {
@@ -254,7 +250,6 @@ func Engine(cli *client.Client, ctx context.Context, w Workflow, sID string, vol
 	allEnvs = append(allEnvs, GenEnvFromArgs(w.Input)...)
 	needSplit := strings.Split(stage.Needs, ",")
 	if stage.Needs != "" {
-
 		for _, v := range needSplit {
 			if val, ok := allOutputs[v]; ok {
 				allEnvs = append(allEnvs, val...)
@@ -403,7 +398,7 @@ func extractArtifacts(path string, s Stage) {
 			// Read all content of src to data
 			data, _ := ioutil.ReadFile(fullPath)
 			// Write data to dst
-			err = ioutil.WriteFile(to, data, 0644)
+			err = ioutil.WriteFile(to, data, 0o644)
 			if err != nil {
 				LwError.Println(err.Error())
 			} else {

@@ -26,11 +26,13 @@ var addCmd = &cobra.Command{
 	},
 }
 
-var repoName string
-var repoDesc string
-var location config.Location
-var folderType bool
-var gitType bool
+var (
+	repoName   string
+	repoDesc   string
+	location   config.Location
+	folderType bool
+	gitType    bool
+)
 
 func init() {
 	repoCmd.AddCommand(addCmd)

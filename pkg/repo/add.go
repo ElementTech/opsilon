@@ -19,7 +19,6 @@ func PromptString(str *string, label string, validate promptui.ValidateFunc, def
 		Validate: validate,
 	}
 	result, err := prompt.Run()
-
 	if err != nil {
 		fmt.Printf("Prompt failed %v\n", err)
 		return
@@ -39,7 +38,6 @@ func Add(name string, desc string, rtype string, path string, branch string, sub
 				return errors.New("repo cannot be blank")
 			}
 			return nil
-
 		}, "")
 	} else {
 		repo.Name = name
@@ -80,7 +78,6 @@ func Add(name string, desc string, rtype string, path string, branch string, sub
 					return errors.New("URL cannot be blank")
 				}
 				return nil
-
 			}, "")
 		} else {
 			repo.Location.Path = path

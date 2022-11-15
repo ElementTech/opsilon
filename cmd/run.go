@@ -18,10 +18,12 @@ var runCmd = &cobra.Command{
 	},
 }
 
-var repoNameRun string
-var workflowName string
-var inputs map[string]string
-var confirm bool
+var (
+	repoNameRun  string
+	workflowName string
+	inputs       map[string]string
+	confirm      bool
+)
 
 func init() {
 	rootCmd.AddCommand(runCmd)

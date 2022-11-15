@@ -27,6 +27,7 @@ func runStageGroup(wg *sync.WaitGroup, stageIDs []string, cli *client.Client, ct
 		go Engine(cli, ctx, w, id, vol, dir, allOutputs, wg, skippedStages)
 	}
 }
+
 func ToGraph(w Workflow) {
 	skippedStages := make([]string, 0)
 

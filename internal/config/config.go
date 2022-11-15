@@ -49,6 +49,7 @@ func PrintRepos(repos []Repo) {
 	}
 	table.Render() // Send output
 }
+
 func TrimSuffix(s, suffix string) string {
 	if strings.HasSuffix(s, suffix) {
 		s = s[:len(s)-len(suffix)]
@@ -98,6 +99,7 @@ func GetConfig() []Repo {
 	logger.HandleErr(err2)
 	return C.Repositories
 }
+
 func GetConfigFile() *RepoFile {
 	err2 := viper.Unmarshal(&C)
 	logger.HandleErr(err2)
@@ -105,7 +107,7 @@ func GetConfigFile() *RepoFile {
 }
 
 func SaveToConfig(r RepoFile) {
-	file, err := os.OpenFile(viper.ConfigFileUsed(), os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
+	file, err := os.OpenFile(viper.ConfigFileUsed(), os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0o600)
 	if err != nil {
 		log.Fatalf("error opening/creating file: %v", err)
 	}

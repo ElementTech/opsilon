@@ -101,7 +101,6 @@ func inputArgsIntoWorklow(m map[string]string, act *engine.Workflow) {
 }
 
 func PromptArguments(act *engine.Workflow) {
-
 	argsWithValues := act.Input
 	// Each template displays the data received from the prompt with some formatting.
 	templates := &promptui.PromptTemplates{
@@ -127,7 +126,6 @@ func PromptArguments(act *engine.Workflow) {
 		}
 
 		result, err := prompt.Run()
-
 		if err != nil {
 			fmt.Printf("Prompt failed %v\n", err)
 			return

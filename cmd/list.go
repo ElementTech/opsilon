@@ -5,7 +5,6 @@ package cmd
 
 import (
 	"github.com/jatalocks/opsilon/pkg/list"
-
 	"github.com/spf13/cobra"
 )
 

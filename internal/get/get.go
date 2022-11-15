@@ -177,6 +177,7 @@ func appendToWArray(v config.Repo, workflowArray *[]engine.Workflow) error {
 	*workflowArray = append(*workflowArray, *w...)
 	return nil
 }
+
 func GetWorkflowsForRepo(repoList []string) ([]engine.Workflow, error) {
 	data := config.GetConfig()
 	workflowArray := []engine.Workflow{}

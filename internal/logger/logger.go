@@ -37,6 +37,7 @@ func HandleErr(err error) {
 func Free(text ...string) {
 	fmt.Println(strings.Join(text[:], " "))
 }
+
 func Custom(col color.Attribute, text ...string) {
 	c := color.New(col)
 	c.Println(strings.Join(text[:], " "))
