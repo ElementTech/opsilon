@@ -15,8 +15,10 @@ import (
 )
 
 type Location struct {
-	Path string `mapstructure:"path" validate:"nonzero"`
-	Type string `mapstructure:"type" validate:"nonzero"`
+	Path      string `mapstructure:"path" validate:"nonzero"`
+	Type      string `mapstructure:"type" validate:"nonzero"`
+	Subfolder string `mapstructure:"subfolder,omitempty"`
+	Branch    string `mapstructure:"branch,omitempty"`
 }
 
 type Repo struct {

@@ -1,11 +1,13 @@
 repositories:
-  - name: example_repo
-    description: Contains example workflows
+  - name: example_repo_folder
+    description: Contains example workflows from a folder on the computer
     location:
       path: /Users/amitai.getzler/Desktop/Explorium/opsilon/examples/workflows
       type: folder
-  - name: test_repo
-    description: Contains example workflows
+  - name: example_repo_git
+    description: Contains example workflows from a folder in a git repository
     location:
-      path: /Users/amitai.getzler/Desktop/Explorium/opsilon/examples/workflows
-      type: folder      
+      path: https://github.com/jatalocks/opsilon
+      type: git
+      subfolder: examples/workflows
+      branch: main # If omitted, will fetch default branch 

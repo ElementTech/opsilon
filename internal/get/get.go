@@ -2,16 +2,50 @@ package get
 
 import (
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 
+	"github.com/go-git/go-git/plumbing/object"
+	"github.com/go-git/go-git/v5"
+	"github.com/go-git/go-git/v5/storage/memory"
 	"github.com/jatalocks/opsilon/internal/config"
 	"github.com/jatalocks/opsilon/internal/engine"
 	"github.com/jatalocks/opsilon/internal/logger"
 	"github.com/jatalocks/opsilon/internal/validate"
 	"gopkg.in/yaml.v3"
 )
+
+// CheckArgs should be used to ensure the right command line arguments are
+// passed before executing an example.
+func CheckArgs(arg ...string) {
+	if len(os.Args) < len(arg)+1 {
+		Warning("Usage: %s %s", os.Args[0], strings.Join(arg, " "))
+		os.Exit(1)
+	}
+}
+
+// CheckIfError should be used to naively panics if an error is not nil.
+func CheckIfError(err error) {
+	if err == nil {
+		return
+	}
+
+	fmt.Printf("\x1b[31;1m%s\x1b[0m\n", fmt.Sprintf("error: %s", err))
+	os.Exit(1)
+}
+
+// Info should be used to describe the example commands that are about to run.
+func Info(format string, args ...interface{}) {
+	fmt.Printf("\x1b[34;1m%s\x1b[0m\n", fmt.Sprintf(format, args...))
+}
+
+// Warning should be used to display a warning
+func Warning(format string, args ...interface{}) {
+	fmt.Printf("\x1b[36;1m%s\x1b[0m\n", fmt.Sprintf(format, args...))
+}
 
 func getWorkflows(location config.Location, repo string) *[]engine.Workflow {
 	data := []engine.Workflow{}
@@ -43,6 +77,34 @@ func getWorkflows(location config.Location, repo string) *[]engine.Workflow {
 			}
 
 		}
+	} else if location.Type == "git" {
+
+		CheckArgs(location.Path)
+
+		r, err := git.Clone(memory.NewStorage(), nil, &git.CloneOptions{
+			URL: location.Path,
+		})
+
+		CheckIfError(err)
+
+		// ... retrieving the branch being pointed by HEAD
+		ref, err := r.Head()
+		CheckIfError(err)
+
+		// ... retrieving the commit object
+		tree, err := r.TreeObjects()
+		CheckIfError(err)
+
+		tree.ForEach(func(f *object.File) error {
+			files = append(files, f.Name)
+			return nil
+		})
+
+		commit, err := r.CommitObject(ref.Hash())
+		CheckIfError(err)
+
+		fmt.Println(commit)
+
 	}
 
 	// else {
