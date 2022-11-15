@@ -1,0 +1,11 @@
+repositories:
+  - name: example_repo
+    description: Contains example workflows
+    location:
+      path: /Users/amitai.getzler/Desktop/Explorium/opsilon/examples/workflows
+      type: folder
+  - name: test_repo
+    description: Contains example workflows
+    location:
+      path: /Users/amitai.getzler/Desktop/Explorium/opsilon/examples/workflows
+      type: folder      

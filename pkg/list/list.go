@@ -8,19 +8,19 @@ import (
 	"github.com/jatalocks/opsilon/internal/utils"
 )
 
-func List() {
-	actions := utils.ConfigPopulateWorkflows()
+func List(repoList []string) {
+	workflows := utils.GetWorkflowsForRepo(repoList)
 
 	tmpl := `{{range .}}
-	--------- {{.Name}} ----------
+	--------- {{.ID}} ----------
 Description: 
-{{.Workflow.Description}}
-Input: {{range .Workflow.Input}}
+{{.Description}}
+Input: {{range .Input}}
 - {{.Name}} {{ if .Default}}({{.Default}}){{end}}{{end}}
 {{end}}`
 
 	t := template.Must(template.New("tmpl").Parse(tmpl))
-	err := t.Execute(os.Stdout, actions)
+	err := t.Execute(os.Stdout, workflows)
 	logger.HandleErr(err)
 
 }

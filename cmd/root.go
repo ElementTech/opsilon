@@ -68,12 +68,14 @@ func initConfig() {
 	// If a config file is found, read it in.
 	err := viper.ReadInConfig()
 	if err != nil {
-		logger.Error("There appears to be a problem with your configuration. Please refer to the docs.")
+		logger.Error("It seems that you don't yet have a repository config file. Please run:")
+		logger.Info("opsilon repo add")
+		os.Exit(1)
 	}
-	logger.HandleErr(err)
-	err2 := viper.Unmarshal(&[]config.Action{})
+	err2 := viper.Unmarshal(&[]config.RepoFile{})
 	if err2 != nil {
-		logger.Error("There appears to be a problem with your configuration. Please refer to the docs.")
+		logger.Error("There appears to be a problem with your configuration. Please refer to the docs or run opsilon repo command.")
+		os.Exit(1)
 	}
 	logger.HandleErr(err2)
 	if err == nil {

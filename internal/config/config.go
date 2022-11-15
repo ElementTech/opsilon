@@ -1,7 +1,6 @@
 package config
 
 import (
-	"github.com/jatalocks/opsilon/internal/engine"
 	"github.com/jatalocks/opsilon/internal/logger"
 	"github.com/spf13/viper"
 )
@@ -11,20 +10,30 @@ type Location struct {
 	Type string `mapstructure:"type" validate:"nonzero"`
 }
 
-type Action struct {
-	Name     string          `mapstructure:"name" validate:"nonzero"`
-	Location Location        `mapstructure:"location" validate:"nonzero"`
-	Workflow engine.Workflow `mapstructure:"workflow,omitempty"`
+type Repo struct {
+	Name        string   `mapstructure:"name" validate:"nonzero"`
+	Description string   `mapstructure:"description"`
+	Location    Location `mapstructure:"location" validate:"nonzero"`
 }
 
-type ActionFile struct {
-	Actions []Action `mapstructure:"workflows" validate:"nonzero"`
+type RepoFile struct {
+	Repositories []Repo `mapstructure:"repositories" validate:"nonzero"`
 }
 
-var C ActionFile
+var C RepoFile
 
-func GetConfig() []Action {
+func GetConfig() []Repo {
 	err2 := viper.Unmarshal(&C)
 	logger.HandleErr(err2)
-	return C.Actions
+	return C.Repositories
+}
+
+func GetRepoList() []string {
+	temp := []string{}
+	err2 := viper.Unmarshal(&C)
+	logger.HandleErr(err2)
+	for _, r := range C.Repositories {
+		temp = append(temp, r.Name)
+	}
+	return temp
 }

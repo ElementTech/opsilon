@@ -14,40 +14,48 @@ import (
 )
 
 func Select() {
-	actions := utils.ConfigPopulateWorkflows()
+	repoList := config.GetRepoList()
+	promptRepo := &promptui.Select{
+		Label: "Select Repo",
+		Items: repoList,
+	}
+	iR, _, err := promptRepo.Run()
+	logger.HandleErr(err)
+	chosenRepo := repoList[iR]
+	workflows := utils.GetWorkflowsForRepo([]string{chosenRepo})
 
 	templates := &promptui.SelectTemplates{
 		Label:    "{{ . }}",
-		Active:   "\u25B6\uFE0F {{ .Name | cyan }} ({{ .Workflow.Description | green }})",
-		Inactive: "  {{ .Name | cyan }} ({{ .Workflow.Description | yellow }})",
-		Selected: "\u25B6\uFE0F {{ .Name | cyan }}",
+		Active:   "\u25B6\uFE0F {{ .ID | cyan }} ({{ .Description | green }})",
+		Inactive: "  {{ .ID | cyan }} ({{ .Description | yellow }})",
+		Selected: "\u25B6\uFE0F {{ .ID | cyan }}",
 	}
 
 	prompt := &promptui.Select{
-		Label:     "Select Action",
-		Items:     actions,
+		Label:     "Select Workflow",
+		Items:     workflows,
 		Templates: templates,
 	}
 
 	i, _, err := prompt.Run()
 
 	logger.HandleErr(err)
-	chosenAct := actions[i]
+	chosenAct := workflows[i]
 	cyan := color.New(color.FgCyan).SprintFunc()
-	fmt.Printf("You Chose: %s\n", cyan(chosenAct.Name))
+	fmt.Printf("You Chose: %s\n", cyan(chosenAct.ID))
 	PromptArguments(&chosenAct)
 	toRun, err := utils.Confirm(chosenAct)
 	logger.HandleErr(err)
 	if toRun {
-		engine.ToGraph(chosenAct.Workflow)
+		engine.ToGraph(chosenAct)
 	} else {
 		fmt.Println("Run Canceled")
 	}
 }
 
-func PromptArguments(act *config.Action) {
+func PromptArguments(act *engine.Workflow) {
 
-	argsWithValues := act.Workflow.Input
+	argsWithValues := act.Input
 	// Each template displays the data received from the prompt with some formatting.
 	templates := &promptui.PromptTemplates{
 		Prompt:  "{{ .Name }} ({{ .Default | faint }}): ",
@@ -86,8 +94,8 @@ func PromptArguments(act *config.Action) {
 		argsWithValues[i].Default = result
 		fmt.Printf("%s\n", result)
 	}
-	tmpl := `--------- Running "{{.Name}}" with: ----------
-{{range .Workflow.Input}}
+	tmpl := `--------- Running "{{.ID}}" with: ----------
+{{range .Input}}
 {{ .Name }}: {{ .Default }}
 {{end}}
 	`

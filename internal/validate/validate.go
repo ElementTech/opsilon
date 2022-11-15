@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/jatalocks/opsilon/internal/config"
+	"github.com/jatalocks/opsilon/internal/engine"
 	"github.com/jatalocks/opsilon/internal/logger"
 	"gopkg.in/validator.v2"
 )
@@ -22,10 +23,19 @@ func noWhiteSpace(v interface{}, param string) error {
 	return nil
 }
 
-func ValidatePopulatedActionFile(a *[]config.Action) {
+func ValidateRepoFile(w *[]config.RepoFile) {
 	validator.SetValidationFunc("nowhitespace", noWhiteSpace)
-	if errs := validator.Validate(&a); errs != nil {
-		logger.Operation("Your Configuration has Problems:")
+	if errs := validator.Validate(&w); errs != nil {
+		logger.Operation("Your Repo Config file has Problems:")
+		logger.Error(errs.Error())
+		os.Exit(1)
+	}
+}
+
+func ValidateWorkflows(w *[]engine.Workflow) {
+	validator.SetValidationFunc("nowhitespace", noWhiteSpace)
+	if errs := validator.Validate(&w); errs != nil {
+		logger.Operation("Your Workflows have Problems:")
 		logger.Error(errs.Error())
 		os.Exit(1)
 	}
