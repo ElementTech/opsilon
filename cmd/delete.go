@@ -11,7 +11,7 @@ import (
 // deleteCmd represents the delete command
 var deleteCmd = &cobra.Command{
 	Use:   "delete",
-	Short: "Delete a repo from your local config.",
+	Short: "Delete a repo from your local config",
 	Run: func(cmd *cobra.Command, args []string) {
 		initConfig()
 		repo.Delete(repoList)

@@ -10,7 +10,7 @@ import (
 // repoCmd represents the repo command
 var repoCmd = &cobra.Command{
 	Use:   "repo",
-	Short: "Operate on workflow repositories.",
+	Short: "Operate on workflow repositories",
 	// Run: func(cmd *cobra.Command, args []string) {
 	// 	fmt.Println("repo called")
 	// },
