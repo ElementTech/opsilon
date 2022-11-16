@@ -67,14 +67,15 @@ func getWorkflows(location config.Location, repo string) (*[]engine.Workflow, er
 	data := []engine.Workflow{}
 	logger.Operation("Getting workflows from repo", repo, "in location", location.Path, "type", location.Type)
 	if location.Type == "folder" {
-		if location.Path[0:1] == "/" {
+		// if location.Path[0:1] == "/" {
 
-			err := filepath.Walk(location.Path,
-				func(path string, info os.FileInfo, err error) error {
-					if err != nil {
-						return err
-					}
-					if !info.IsDir() {
+		err := filepath.Walk(location.Path,
+			func(path string, info os.FileInfo, err error) error {
+				if err != nil {
+					return err
+				}
+				if !info.IsDir() {
+					if strings.Contains(info.Name(), ".ops.yaml") || strings.Contains(info.Name(), ".ops.yml") {
 						yfile, err := ioutil.ReadFile(path)
 						if err != nil {
 							return err
@@ -88,14 +89,15 @@ func getWorkflows(location config.Location, repo string) (*[]engine.Workflow, er
 
 						data = append(data, temp)
 					}
+				}
 
-					return err
-				})
-			if err != nil {
-				return nil, err
-			}
-
+				return err
+			})
+		if err != nil {
+			return nil, err
 		}
+
+		// }
 	} else if location.Type == "git" {
 
 		CheckArgs(location.Path)
@@ -120,7 +122,7 @@ func getWorkflows(location config.Location, repo string) (*[]engine.Workflow, er
 		}
 		globalErr := *new(error)
 		tree.Files().ForEach(func(f *object.File) error {
-			if strings.Contains(f.Name, location.Subfolder) && (strings.Contains(f.Name, "yaml") || strings.Contains(f.Name, "yml")) {
+			if strings.Contains(f.Name, location.Subfolder) && (strings.Contains(f.Name, ".ops.yaml") || strings.Contains(f.Name, ".ops.yml")) {
 				fReader, err := f.Blob.Reader()
 				if err != nil {
 					globalErr = err

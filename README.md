@@ -1,16 +1,17 @@
-# opsilon
+# Opsilon
 [![Test](https://github.com/jatalocks/opsilon/actions/workflows/test.yml/badge.svg)](https://github.com/jatalocks/opsilon/actions/workflows/test.yml) [![golangci-lint](https://github.com/jatalocks/opsilon/actions/workflows/lint.yml/badge.svg)](https://github.com/jatalocks/opsilon/actions/workflows/lint.yml) [![Go Report Card](https://goreportcard.com/badge/github.com/jatalocks/opsilon)](https://goreportcard.com/report/github.com/jatalocks/opsilon) [![Go Reference](https://pkg.go.dev/badge/github.com/jatalocks/opsilon.svg)](https://pkg.go.dev/github.com/jatalocks/opsilon) [![codecov](https://codecov.io/gh/jatalocks/opsilon/branch/main/graph/badge.svg?token=Y5K4SID71F)](https://codecov.io/gh/jatalocks/opsilon)
 
 A customizable CLI for collaboratively running container-native workflows
 
+For full usage, please refer to the: [Docs](/assets/doc.md).
+
 <!--ts-->
-   * [Opsilon](#opsilon)
    * [Quickstart](#quickstart)
-   * [Project Layout](#project-layout)
-   * [How to use this template](#how-to-use-this-template)
-   * [Demo Application](#demo-application)
-   * [Makefile Targets](#makefile-targets)
-   * [Contribute](#contribute)
+   * [Demo](#demo)
+   * [Contribution](#contribute)
+     * [Development Features](###development-features)
+     * [Project Layout](###project-layout)
+     * [Makefile Targets](###makefile-targets)
 <!--te-->
 
 
@@ -55,25 +56,29 @@ Flags:
 
 Use "opsilon [command] --help" for more information about a command.
 ```
-# Development Features
+
+# Contribution
+I would always welcome an issue or a PR! Every contribution is welcome. Below is some information to help you get started.
+
+### Development Features
 - [goreleaser](https://goreleaser.com/) with `deb.` and `.rpm` package releasing
 - [golangci-lint](https://golangci-lint.run/) for linting and formatting
 - [Github Actions](.github/worflows) Stages (Lint, Test, Build, Release)
 - [Gitlab CI](.gitlab-ci.yml) Configuration (Lint, Test, Build, Release)
-- [cobra](https://cobra.dev/) example setup including tests
+- [cobra](https://cobra.dev/) CLI parser
 - [Makefile](Makefile) - with various useful targets and documentation (see Makefile Targets)
 - [Github Pages](_config.yml) using [jekyll-theme-minimal](https://github.com/pages-themes/minimal) (checkout [https://jatalocks.github.io/opsilon/](https://falcosuessgott.github.io/opsilon/))
 - [pre-commit-hooks](https://pre-commit.com/) for formatting and validating code before committing
 
-# Project Layout
+### Project Layout
 * [assets/](https://pkg.go.dev/github.com/jatalocks/opsilon/assets) => docs
 * [cmd/](https://pkg.go.dev/github.com/jatalocks/opsilon/cmd)  => commandline configurartions (flags, subcommands)
-* [pkg/](https://pkg.go.dev/github.com/jatalocks/opsilon/pkg)  => packages that are okay to import for other projects
-* [internal/](https://pkg.go.dev/github.com/jatalocks/opsilon/pkg)  => packages that are only for project internal purposes
+* [pkg/](https://pkg.go.dev/github.com/jatalocks/opsilon/pkg)  => the entrypoints of the CLI commands
+* [internal/](https://pkg.go.dev/github.com/jatalocks/opsilon/pkg)  => packages that are the main core function of the project
 - [`tools/`](tools/) => for automatically shipping all required dependencies when running `go get` (or `make bootstrap`) such as `golang-ci-lint` (see: https://github.com/golang/go/wiki/Modules#how-can-i-track-tool-dependencies-for-a-module)
 )
 
-# Makefile Targets
+### Makefile Targets
 ```sh
 $> make
 bootstrap                      install build deps
@@ -90,5 +95,3 @@ run                            run the app
 test                           display test coverage
 ```
 
-# Contribute
-If you find issues in that setup or have some nice features / improvements, I would welcome an issue or a PR :)
