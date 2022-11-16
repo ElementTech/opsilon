@@ -32,7 +32,7 @@ $ curl -L https://github.com/jatalocks/opsilon/releases/download/v0.0.1-alpha/op
 Test if the Opsilon CLI works: *(When it doesn't work, you may have downloaded the wrong file or your device/os isn't supported)*
 
 ```bash
-$ ./opsilon
+$ opsilon
 ```
 
 Move the executable to a folder on your `$PATH`:
