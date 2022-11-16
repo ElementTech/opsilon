@@ -7,6 +7,7 @@ For full usage, please refer to the: [Docs](/assets/doc.md).
 
 <!--ts-->
    * [Quickstart](#quickstart)
+   * [Usage](#usage)
    * [Demo](#demo)
    * [Contribution](#contribute)
      * [Development Features](###development-features)
@@ -18,7 +19,7 @@ For full usage, please refer to the: [Docs](/assets/doc.md).
 
 This project serves the purpose of giving developers, operations and other personal the ability to run custom workflows on their personal computer using a container environment, without them writing code and having to understand the meaning behind the script.
 # Download
-### Manually
+### Quickstart
 
 Download the [latest release](https://github.com/jatalocks/opsilon/releases/latest) for your os: (this example uses version `v0.0.1`).
 For Mac:
