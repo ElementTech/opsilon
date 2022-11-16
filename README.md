@@ -38,7 +38,7 @@ Move the executable to a folder on your `$PATH`:
 $ mv opsilon /usr/local/bin/opsilon # or /usr/bin/opsilon
 ```
 ## Usage
-
+Make sure you have Docker installed on your computer.
 1. Connect to the examples folder present in this repository
 ```sh
 $ opsilon repo add --git -n examples -d examples -s examples/workflows -p https://github.com/jatalocks/opsilon.git -b main
