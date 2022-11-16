@@ -96,6 +96,8 @@ repositories:
       subfolder: examples/workflows # Optional. Will take files that contain this in their Path. 
       branch: main # If omitted, will fetch default branch 
 ```
+-  For private repositories, use `https://myuser:github_token@github.com/myprivateorg/myprivaterepo.git`
+
 
 The `repo` command includes useful commands to edit this file. Any argument missing from the command will be prompted to you as an input:
 
