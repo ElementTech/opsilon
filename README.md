@@ -66,6 +66,7 @@ Available Commands:
   list        List all workflows available in your repositories
   repo        Operate on workflow repositories
   run         Run an available workflow
+  version     Displays opsilon version
 
 Flags:
       --config string   config file (default is $HOME/.opsilon.yaml)
