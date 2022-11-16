@@ -24,7 +24,7 @@ Download the [latest release](https://github.com/jatalocks/opsilon/releases/late
 For Mac:
 ```bash
 $ wget https://github.com/jatalocks/opsilon/releases/download/v0.0.1-alpha/opsilon_0.0.1-alpha_Darwin_x86_64.tar.gz \
- | tar -xz opsilon
+ | tar -xz opsilon | chmod u+x opsilon
 # or
 $ curl -L https://github.com/jatalocks/opsilon/releases/download/v0.0.1-alpha/opsilon_0.0.1-alpha_Darwin_x86_64.tar.gz \
  | tar -xz opsilon | chmod u+x opsilon
