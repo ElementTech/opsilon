@@ -23,9 +23,6 @@ This project serves the purpose of giving developers, operations and other perso
 Download the [latest release](https://github.com/jatalocks/opsilon/releases/latest) for your os: (this example uses version `v0.0.1`).
 For Mac:
 ```bash
-$ wget https://github.com/jatalocks/opsilon/releases/download/v0.0.1-alpha/opsilon_0.0.1-alpha_Darwin_x86_64.tar.gz \
- | tar -xz opsilon | chmod u+x opsilon
-# or
 $ curl -L https://github.com/jatalocks/opsilon/releases/download/v0.0.1-alpha/opsilon_0.0.1-alpha_Darwin_x86_64.tar.gz \
  | tar -xz opsilon | chmod u+x opsilon
 ```
