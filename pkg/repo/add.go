@@ -85,12 +85,12 @@ func Add(name string, desc string, rtype string, path string, branch string, sub
 		if branch == "" {
 			PromptString(&repo.Location.Branch, "Branch (Optional)", func(input string) error { return nil }, "")
 		} else {
-			repo.Location.Branch = path
+			repo.Location.Branch = branch
 		}
 		if subfolder == "" {
 			PromptString(&repo.Location.Subfolder, "Subfolder (Optional)", func(input string) error { return nil }, "")
 		} else {
-			repo.Location.Subfolder = path
+			repo.Location.Subfolder = subfolder
 		}
 	}
 	validate.ValidateRepo(&repo)

@@ -17,70 +17,40 @@ For full usage, please refer to the: [Docs](/assets/doc.md).
 
 
 This project serves the purpose of giving developers, operations and other personal the ability to run custom workflows on their personal computer using a container environment, without them writing code and having to understand the meaning behind the script.
-# Quickstart
+# Download
 ### Manually
 
-Download the [latest release](https://github.com/jatalocks/opsilon/releases/latest) for your os: (this example uses version `v0.0.1`)
-
+Download the [latest release](https://github.com/jatalocks/opsilon/releases/latest) for your os: (this example uses version `v0.0.1`).
+For Mac:
 ```bash
-$ wget -O opsilon.tar.gz https://github.com/jatalocks/opsilon/releases/download/v0.0.1-alpha/opsilon_0.0.1-alpha_Darwin_arm64.tar.gz | tar -xz
+$ wget https://github.com/jatalocks/opsilon/releases/download/v0.0.1-alpha/opsilon_0.0.1-alpha_Darwin_x86_64.tar.gz | tar -xz opsilon
 # or
-$ curl -L https://github.com/jatalocks/opsilon/releases/download/v0.0.1-alpha/opsilon_0.0.1-alpha_Darwin_arm64.tar.gz | tar -xz
+$ curl -L https://github.com/jatalocks/opsilon/releases/download/v0.0.1-alpha/opsilon_0.0.1-alpha_Darwin_x86_64.tar.gz | tar -xz opsilon | chmod u+x opsilon
 ```
-
-Make `opsilon` executable:
+Test if the Opsilon CLI works: *(When it doesn't work, you may have downloaded the wrong file or your device/os isn't supported)*
 
 ```bash
-$ chmod +x opsilon
+$ ./opsilon
 ```
 
-Test if the Gotify-CLI works: *(When it doesn't work, you may have downloaded the wrong file or your device/os isn't supported)*
+Move the executable to a folder on your `$PATH`:
 
 ```bash
-$ opsilon version
+$ mv opsilon /usr/local/bin/opsilon # or /usr/bin/opsilon
 ```
+## Usage
 
-*(optional)* Move the executable to a folder on your `$PATH`:
-
-```bash
-$ mv opsilon /usr/bin/opsilon
-```
-### Arch Linux
-
-Gotify-CLI is available [in the AUR][AUR], so you can install it with
-[any AUR helper][AUR-helpers], i.e. [`yay`][yay]:
-
-```bash
-$ yay -S gotify-cli
-```
-
-> Maintenance of the AUR package is not performed by the Gotify team.
-
-### macOS
-
-Gotify-CLI is available [in Homebrew][brew], so you can install it with:
-
-```bash
-$ brew install gotify
-```
-
-> Maintenance of the Brew package is not performed by the Gotify team.
-
-1. Download the binary
+1. Connect to the examples folder present in this repository
 ```sh
-go get github.com/jatalocks/opsilon
+$ opsilon repo add --git -n examples -d examples -s examples/workflows -p https://github.com/jatalocks/opsilon.git -b main
 ```
-2. Connect to the examples folder present in this repository
+2. List available workflows
 ```sh
-opsilon repo add --git -n examples -d examples -s examples/workflows -p https://github.com/jatalocks/opsilon.git -b main
+$ opsilon list
 ```
-3. List available workflows
+3. Run a workflow!
 ```sh
-opsilon list
-```
-4. Run a workflow!
-```sh
-opsilon run
+$ opsilon run
 ```
 # Demo
 
