@@ -118,3 +118,114 @@ Global Flags:
 
 Use "opsilon repo [command] --help" for more information about a command.
 ```
+
+For now, let's include only the GIT repository in our config:
+```sh
+$> opsilon repo list
+Using config file: /Users/my.user/.opsilon.yaml
++------------------+--------------------------------+--------------------------------------+------+--------+--------------------+
+|       NAME       |          DESCRIPTION           |               PATH/URL               | TYPE | BRANCH |     SUBFOLDER      |
++------------------+--------------------------------+--------------------------------------+------+--------+--------------------+
+| example_repo_git | Contains example workflows     | https://github.com/jatalocks/opsilon | git  | main   | examples/workflows |
+|                  | from a folder in a git         |                                      |      |        |                    |
+|                  | repository                     |                                      |      |        |                    |
++------------------+--------------------------------+--------------------------------------+------+--------+--------------------+
+```
+
+And list available workflows:
+```sh
+$> opsilon list     
+Using config file: /Users/my.user/.opsilon.yaml
+Repository example_repo_git
+Getting workflows from repo example_repo_git in location https://github.com/jatalocks/opsilon type git
++------------------+---------------+--------------------------------+-----------------------------+----------------+-------------+
+|    REPOSITORY    |      ID       |          DESCRIPTION           |         IMAGES USED         |     INPUTS     | STAGE COUNT |
++------------------+---------------+--------------------------------+-----------------------------+----------------+-------------+
+| example_repo_git | example-full  | this is an example workflow    | alpine:latest,ubuntu:latest | arg1,arg2,arg3 |           3 |
+|                  |               | which includes all of opsilons |                             |                |             |
+|                  |               | capabilities                   |                             |                |             |
+| example_repo_git | example-small | this is an example workflow    | alpine:latest,ubuntu:latest | myinput        |           1 |
+|                  |               | which contains some of         |                             |                |             |
+|                  |               | opsilons capabilities          |                             |                |             |
++------------------+---------------+--------------------------------+-----------------------------+----------------+-------------+
+```
+
+Let's run. First let's look at the run command:
+```sh
+$> opsilon run --help
+Run an available workflow
+
+Usage:
+  opsilon run [flags]
+
+Flags:
+  -a, --args stringToString   Comma separated list of key=value arguments for the workflow input (default [])
+      --confirm               Start running without confirmation
+  -h, --help                  help for run
+  -r, --repo string           Repository Name
+  -w, --workflow string       ID of the workflow to run
+
+Global Flags:
+      --config string   config file (default is $HOME/.opsilon.yaml)
+```
+
+As you can see, we can call a workflow from a certain repo, give it inputs and skip confirmation. But for now, let's run it without any argument and let it ask us what we need:
+
+```sh
+$> opsilon run       
+Using config file: /Users/my.user/.opsilon.yaml
+Use the arrow keys to navigate: ↓ ↑ → ← 
+
+? Select Repo: 
+  ▸ example_repo_git
+
+✔ example_repo_git
+
+Repository example_repo_git
+Getting workflows from repo example_repo_git in location https://github.com/jatalocks/opsilon type git
+
+Use the arrow keys to navigate: ↓ ↑ → ← 
+
+Select Workflow
+  ▶️ example-full (this is an example workflow which includes all of opsilons capabilities)
+    example-small (this is an example workflow which contains some of opsilons capabilities)
+
+▶️ example-full
+You Chose: example-full
+arg1 (): something
+something
+arg2 (defaultvalue): 
+defaultvalue
+arg3 (): another_thing
+another_thing
+--------- Running "example-full" with: ----------
+
+arg1: something
+
+arg2: defaultvalue
+
+arg3: another_thing
+
+? Run example-full? [Y/n] █
+
+Run example-full: Y
+Running in Parallel: writefile
+[write a file:writefile] Evaluating If Statement: $arg3 != "", with the following variables: [{filename testValue} {onlyhere something} {arg1 something} {arg2 defaultvalue} {arg3 another_thing}]
+[write a file:writefile] Running Stage with the following variables: [filename=testValue onlyhere=something arg1=something arg2=defaultvalue arg3=another_thing]
+[write a file:writefile] Starting Stage
+[write a file:writefile] Copying testdir1 To /Users/my.user/opsilon/testdir1
+[write a file:writefile] Copied testdir1 To /Users/my.user/opsilon/testdir1
+[write a file:writefile] stat /var/folders/cr/mbr1038j5s50tm9gvkq04vx00000gp/T/temp3900982779/test.txt: no such file or directory
+Running in Parallel: writefile2
+[write a file:writefile2] Evaluating If Statement: $exportedArg == "wrong_output", with the following variables: [{filename testValue} {arg1 something} {arg2 defaultvalue} {arg3 another_thing} {exportedArg i_am_an_output}]
+[write a file:writefile2] Stage Skipped due to IF condition
+Running in Parallel: readfile
+[read the file:readfile] Evaluating If Statement: $exportedArg == "i_am_an_output", with the following variables: [{filename testValue} {arg1 something} {arg2 defaultvalue} {arg3 another_thing} {exportedArg i_am_an_output}]
+[read the file:readfile] Stage Skipped due to needed stage skipped
+```
+
+And so we have chosen and ran our workflow! We could have done the same thing automatically without prompt with the following command:
+
+```sh
+$> opsilon run -r example_repo_git -w example-full --confirm -a "arg1=something,arg3=something" #arg2 has a default, we can choose to override.
+```

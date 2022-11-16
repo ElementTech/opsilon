@@ -33,7 +33,7 @@ func init() {
 	// Cobra supports Persistent Flags which will work for this command
 	// and all subcommands, e.g.:
 	// runCmd.PersistentFlags().String("foo", "", "A help for foo")
-	runCmd.Flags().StringVarP(&repoNameRun, "reop", "r", "", "Repository Name")
+	runCmd.Flags().StringVarP(&repoNameRun, "repo", "r", "", "Repository Name")
 	runCmd.Flags().StringVarP(&workflowName, "workflow", "w", "", "ID of the workflow to run")
 	runCmd.Flags().BoolVar(&confirm, "confirm", false, "Start running without confirmation")
 	runCmd.Flags().StringToStringVarP(&inputs, "args", "a", nil, "Comma separated list of key=value arguments for the workflow input")
