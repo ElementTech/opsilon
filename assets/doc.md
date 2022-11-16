@@ -1,6 +1,6 @@
 # Opsilon - How to use
 
-Opsilon comes with some basic terms to define, connect to and run container-native workflows defined as YAML files. These are called `workflows`. Workflow files end in `.ops.yaml `. Below is a full example of all the capabilities of a single workflow.
+Opsilon comes with some basic terms to define, connect to and run container-native workflows defined as YAML files. These are called `workflows`. Workflow files end in `.ops.yaml`. Below is a full example of all the capabilities of a single workflow.
 
 ```yaml
 # ID of job.
