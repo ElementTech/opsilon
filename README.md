@@ -113,3 +113,6 @@ run                            run the app
 test                           display test coverage
 ```
 
+### Thanks
+
+This project was made possible by https://github.com/FalcoSuessgott/golang-cli-template
