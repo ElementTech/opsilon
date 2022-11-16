@@ -85,7 +85,7 @@ I would always welcome an issue or a PR! Every contribution is welcome. Below is
 - [Gitlab CI](.gitlab-ci.yml) Configuration (Lint, Test, Build, Release)
 - [cobra](https://cobra.dev/) CLI parser
 - [Makefile](Makefile) - with various useful targets and documentation (see Makefile Targets)
-- [Github Pages](_config.yml) using [jekyll-theme-minimal](https://github.com/pages-themes/minimal) (checkout [https://jatalocks.github.io/opsilon/](https://falcosuessgott.github.io/opsilon/))
+- [Github Pages](_config.yml) using [jekyll-theme-minimal](https://github.com/pages-themes/minimal) (checkout [https://jatalocks.github.io/opsilon/](https://jatalocks.github.io/opsilon/))
 - [pre-commit-hooks](https://pre-commit.com/) for formatting and validating code before committing
 
 ### Project Layout
