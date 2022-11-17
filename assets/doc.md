@@ -229,5 +229,5 @@ Running in Parallel: readfile
 And so we have chosen and ran our workflow! We could have done the same thing automatically without prompt with the following command:
 
 ```sh
-$> opsilon run -r example_repo_git -w example-full --confirm -a "arg1=something,arg3=something" #arg2 has a default, we can choose to override.
+$> opsilon run -r example_repo_git -w example-full --confirm -a "arg1=something,arg2=something,arg3=something" #arg2 has a default, we can choose to override.
 ```
