@@ -3,6 +3,8 @@
 
 A customizable CLI for collaboratively running container-native workflows
 
+[![asciicast](https://asciinema.org/a/14.png)](https://asciinema.org/a/usCiEOjH4n2XnY02fpYlG4zgb)
+
 For full usage, please refer to the: [Docs](/assets/doc.md).
 
 <!--ts-->
