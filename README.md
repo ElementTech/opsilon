@@ -3,7 +3,7 @@
 
 A customizable CLI for collaboratively running container-native workflows
 
-[![asciicast](https://asciinema.org/a/usCiEOjH4n2XnY02fpYlG4zgb.svg)](https://asciinema.org/a/usCiEOjH4n2XnY02fpYlG4zgb)
+![opsilon](https://user-images.githubusercontent.com/99724952/202414217-49f6a1f3-584d-4a6d-8fae-e92e888e1b86.svg)
 
 For full usage, please refer to the: [Docs](/assets/doc.md).
 
