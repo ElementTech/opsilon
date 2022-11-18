@@ -17,6 +17,8 @@ input:
   - name: myinput
     optional: true # If skipped in the CLI input phase, will default to an empty string [($arg3 == "") == true]
 
+mount: true # If true, will mount a copy of the working directory as the volume of the stages
+
 # Stages Rules
 # 1. All stages will run in parallel unless they have a "needs" field
 stages:
@@ -36,5 +38,6 @@ stages:
         echo "myoutput=$onlyhere" >> $OUTPUT
         mkdir artifact_dir
         echo $myinput >> artifact_dir/$testkey.txt
+        ls -l
     artifacts: # Will be saved to the Working Directory where opsilon CLI was run from.
       - artifact_dir

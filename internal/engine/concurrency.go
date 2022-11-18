@@ -38,7 +38,7 @@ func ToGraph(w Workflow) {
 
 	PullImage(w.Image, ctx, cli)
 
-	vol, dir := createVolume(cli, ctx)
+	vol, dir := createVolume(cli, ctx, w.Mount)
 
 	defer RemoveVolume(vol.Name, ctx, cli)
 	defer os.RemoveAll(dir)
