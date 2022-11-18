@@ -56,6 +56,7 @@ type Workflow struct {
 	Description string  `mapstructure:"description"`
 	Env         []Env   `mapstructure:"env"`
 	Input       []Input `mapstructure:"input"`
+	Mount       bool    `mapstructure:"mount"`
 	Stages      []Stage `mapstructure:"stages" validate:"nonzero"`
 	Repo        string  `mapstructure:"repository,omitempty"` // To be filled automatically. Not part of YAML.
 }
@@ -238,7 +239,7 @@ func Engine(cli *client.Client, ctx context.Context, w Workflow, sID string, vol
 	defer wg.Done()
 	idx := slices.IndexFunc(w.Stages, func(c Stage) bool { return c.ID == sID })
 	stage := w.Stages[idx]
-	volOutput, dirOutput := createVolume(cli, ctx)
+	volOutput, dirOutput := createVolume(cli, ctx, false)
 	outputPath := path.Join(dirOutput, "output")
 	_, err := os.Create(outputPath)
 	logger.HandleErr(err)
@@ -283,7 +284,7 @@ func Engine(cli *client.Client, ctx context.Context, w Workflow, sID string, vol
 			LwCrossed.Println("Stage Skipped due to needed stage skipped")
 		} else {
 			if stage.Clean {
-				volClean, dirClean := createVolume(cli, ctx)
+				volClean, dirClean := createVolume(cli, ctx, false)
 				RunStage(stage, ctx, cli, allEnvs, w.Image, volClean, dirClean, volOutput, dirOutput, LwWhite)
 			} else {
 				RunStage(stage, ctx, cli, allEnvs, w.Image, vol, dir, volOutput, dirOutput, LwWhite)
@@ -297,9 +298,16 @@ func Engine(cli *client.Client, ctx context.Context, w Workflow, sID string, vol
 	allOutputs[stage.ID] = outputMap
 }
 
-func createVolume(cli *client.Client, ctx context.Context) (vol types.Volume, dir string) {
+func createVolume(cli *client.Client, ctx context.Context, mount bool) (vol types.Volume, dir string) {
 	dir, err := os.MkdirTemp("", "temp")
 	logger.HandleErr(err)
+
+	if mount {
+		wd, err := os.Getwd()
+		logger.HandleErr(err)
+		err2 := cp.Copy(wd, dir)
+		fmt.Println(err2) // nil
+	}
 
 	vol, err2 := cli.VolumeCreate(ctx, volume.VolumeCreateBody{
 		Driver: "local",
