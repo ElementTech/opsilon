@@ -235,22 +235,11 @@ func ReadPropertiesFile(filename string) ([]Env, error) {
 	return config, nil
 }
 
-func Engine(cli *client.Client, ctx context.Context, w Workflow, sID string, vol types.Volume, dir string, allOutputs map[string][]Env, wg *sync.WaitGroup, skippedStages *[]string) {
-	defer wg.Done()
-	idx := slices.IndexFunc(w.Stages, func(c Stage) bool { return c.ID == sID })
-	stage := w.Stages[idx]
-	volOutput, dirOutput := createVolume(cli, ctx, false)
-	outputPath := path.Join(dirOutput, "output")
-	_, err := os.Create(outputPath)
-	logger.HandleErr(err)
-
-	defer RemoveVolume(volOutput.Name, ctx, cli)
-	defer os.RemoveAll(dirOutput)
-
-	allEnvs := append(w.Env, stage.Env...)
-	allEnvs = append(allEnvs, GenEnvFromArgs(w.Input)...)
-	needSplit := strings.Split(stage.Needs, ",")
-	if stage.Needs != "" {
+func PrepareStage(wEnv []Env, sEnv []Env, inputs []Input, needs string, allOutputs map[string][]Env, stage string, id string) ([]Env, []string, *logger.MyLogWriter, *log.Logger) {
+	allEnvs := append(wEnv, sEnv...)
+	allEnvs = append(allEnvs, GenEnvFromArgs(inputs)...)
+	needSplit := strings.Split(needs, ",")
+	if needs != "" {
 		for _, v := range needSplit {
 			if val, ok := allOutputs[v]; ok {
 				allEnvs = append(allEnvs, val...)
@@ -258,16 +247,33 @@ func Engine(cli *client.Client, ctx context.Context, w Workflow, sID string, vol
 		}
 	}
 	LwWhite := logger.NewLogWriter(func(str string, color color.Attribute) {
-		logger.Custom(color, fmt.Sprintf("[%s:%s] %s", stage.Stage, stage.ID, str))
+		logger.Custom(color, fmt.Sprintf("[%s:%s] %s", stage, id, str))
 	}, color.FgWhite)
 
 	LwCrossed := log.New(logger.NewLogWriter(func(str string, col color.Attribute) {
 		colFuc := color.New(col).SprintFunc()
 		white := color.New(color.CrossedOut).SprintFunc()
-		logger.Free(white(fmt.Sprintf("[%s:%s] ", stage.Stage, stage.ID), colFuc(str)))
+		logger.Free(white(fmt.Sprintf("[%s:%s] ", stage, id), colFuc(str)))
 	}, color.BgYellow), "", 0)
 
-	if !evaluateCondition(stage.If, allEnvs, LwWhite) {
+	return allEnvs, needSplit, LwWhite, LwCrossed
+}
+
+func Engine(cli *client.Client, ctx context.Context, w Workflow, sID string, vol types.Volume, dir string, allOutputs map[string][]Env, wg *sync.WaitGroup, skippedStages *[]string) {
+	defer wg.Done()
+	idx := slices.IndexFunc(w.Stages, func(c Stage) bool { return c.ID == sID })
+	stage := w.Stages[idx]
+	volOutput, dirOutput := CreateVolume(cli, ctx, false)
+	outputPath := path.Join(dirOutput, "output")
+	_, err := os.Create(outputPath)
+	logger.HandleErr(err)
+
+	defer RemoveVolume(volOutput.Name, ctx, cli)
+	defer os.RemoveAll(dirOutput)
+
+	allEnvs, needSplit, LwWhite, LwCrossed := PrepareStage(w.Env, stage.Env, w.Input, stage.Needs, allOutputs, stage.Stage, stage.ID)
+
+	if !EvaluateCondition(stage.If, allEnvs, LwWhite) {
 		*skippedStages = append(*skippedStages, stage.ID)
 		LwCrossed.Println("Stage Skipped due to IF condition")
 	} else {
@@ -284,7 +290,7 @@ func Engine(cli *client.Client, ctx context.Context, w Workflow, sID string, vol
 			LwCrossed.Println("Stage Skipped due to needed stage skipped")
 		} else {
 			if stage.Clean {
-				volClean, dirClean := createVolume(cli, ctx, false)
+				volClean, dirClean := CreateVolume(cli, ctx, false)
 				RunStage(stage, ctx, cli, allEnvs, w.Image, volClean, dirClean, volOutput, dirOutput, LwWhite)
 			} else {
 				RunStage(stage, ctx, cli, allEnvs, w.Image, vol, dir, volOutput, dirOutput, LwWhite)
@@ -298,7 +304,7 @@ func Engine(cli *client.Client, ctx context.Context, w Workflow, sID string, vol
 	allOutputs[stage.ID] = outputMap
 }
 
-func createVolume(cli *client.Client, ctx context.Context, mount bool) (vol types.Volume, dir string) {
+func CreateVolume(cli *client.Client, ctx context.Context, mount bool) (vol types.Volume, dir string) {
 	dir, err := os.MkdirTemp("", "temp")
 	logger.HandleErr(err)
 
@@ -337,7 +343,7 @@ func getVariablesFromExpression(condition string) []string {
 	return varList
 }
 
-func evaluateCondition(condition string, availableValues []Env, LwWhite *logger.MyLogWriter) bool {
+func EvaluateCondition(condition string, availableValues []Env, LwWhite *logger.MyLogWriter) bool {
 	if condition != "" {
 		LwWhite.Write([]byte(fmt.Sprintf("Evaluating If Statement: %s, with the following variables: %s\n", condition, availableValues)))
 
