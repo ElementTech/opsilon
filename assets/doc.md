@@ -3,10 +3,10 @@
 Opsilon comes with some basic terms to define, connect to and run container-native workflows defined as YAML files. These are called `workflows`. Workflow files end in `.ops.yaml`. Below is a full example of all the capabilities of a single workflow.
 
 ```yaml
-# ID of job.
+# ID of job
 id: example-full
 
-# Help Description.
+# Help Description
 description: this is an example workflow which includes all of opsilons capabilities
 
 # Global Docker Image. Used if no Stage specific image is specified.
@@ -24,6 +24,8 @@ input:
     default: defaultvalue
   - name: arg3
     optional: true # If skipped in the CLI input phase, will default to an empty string [($arg3 == "") == true]
+
+mount: true # If true, will mount a copy of the working directory as the volume of the stages
 
 # Stages Rules
 # 1. All stages will run in parallel unless they have a "needs" field
@@ -123,6 +125,7 @@ Use "opsilon repo [command] --help" for more information about a command.
 
 For now, let's include only the GIT repository in our config:
 ```sh
+$> opsilon repo add --git -n examples -d examples -s examples/workflows -p https://github.com/jatalocks/opsilon.git -b main
 $> opsilon repo list
 Using config file: /Users/my.user/.opsilon.yaml
 +------------------+--------------------------------+--------------------------------------+------+--------+--------------------+
