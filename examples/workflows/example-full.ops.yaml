@@ -40,8 +40,11 @@ stages:
       - |
         echo "Starting Stage"
         echo "exportedArg=i_am_an_output" >> $OUTPUT
+        ls -l $OUTPUT
+        cat $OUTPUT
         mkdir testdir1
         echo $arg3 >> testdir1/test.txt
+        echo "Stage Ended"
     artifacts: # Will be saved to the Working Directory where opsilon CLI was run from.
       - testdir1
       - test.txt # Will not exist, the runner will ignore this and print a warning.
@@ -64,7 +67,7 @@ stages:
   - stage: read the file
     id: readfile
     needs: writefile,writefile2 # Comma Separated list of stage IDs
-    if: $exportedArg == "i_am_an_output"
+    if: $exportedArg == "wrong_output"
     script:
       - sh
       - -c
