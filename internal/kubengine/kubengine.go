@@ -294,7 +294,7 @@ func (c *Client) createPodWatcher(ctx context.Context, resName string) (watch.In
 	return c.k8s.CoreV1().Pods(c.ns).Watch(ctx, opts)
 }
 
-func (c *Client) waitPodRunning(ctx context.Context, resName string, LwWhite *logger.MyLogWriter) error {
+func (c *Client) waitPod(ctx context.Context, resName string, LwWhite *logger.MyLogWriter, state string) error {
 	watcher, err := c.createPodWatcher(ctx, resName)
 	if err != nil {
 		return err
@@ -306,11 +306,23 @@ func (c *Client) waitPodRunning(ctx context.Context, resName string, LwWhite *lo
 		select {
 		case event := <-watcher.ResultChan():
 			pod := event.Object.(*v1.Pod)
-
-			if pod.Status.Phase == v1.PodRunning {
-				// LwWhite.Write([]byte(fmt.Sprintf("The POD \"%s\" is running/success\n", resName)))
-				return nil
+			if state == "Running" {
+				if pod.Status.InitContainerStatuses[0].State.Running != nil {
+					return nil
+				}
+			} else if state == "Terminated" {
+				if pod.Status.InitContainerStatuses[0].State.Terminated != nil {
+					return nil
+				}
+			} else if state == "Pod" {
+				fmt.Println(pod.Status.Phase, pod.Status.ContainerStatuses)
+				if pod.Status.Phase == v1.PodRunning {
+					if pod.Status.ContainerStatuses[0].State.Running != nil {
+						return nil
+					}
+				}
 			}
+			// LwWhite.Write([]byte(fmt.Sprintf("The POD \"%s\" is running/success\n", resName)))
 
 		case <-ctx.Done():
 			// LwWhite.Write([]byte(fmt.Sprintf("Exit from waitPodRunning for POD \"%s\" because the context is done", resName)))
@@ -326,7 +338,7 @@ func (c *Client) getPodLogs(ctx context.Context, podName string, LwWhite *logger
 		TailLines: &count,
 	}
 
-	err := c.waitPodRunning(ctx, podName, LwWhite)
+	err := c.waitPod(ctx, podName, LwWhite, "Pod")
 	logger.HandleErr(err)
 
 	podLogRequest := c.k8s.CoreV1().
@@ -386,9 +398,12 @@ func (cli *Client) RunStageKubernetes(s engine.Stage, ctx context.Context, envs 
 	// logger.HandleErr(err)
 	err = cli.getPodLogs(ctx, podName, LwWhite)
 	logger.HandleErr(err)
-
+	err = cli.waitPod(ctx, podName, LwWhite, "Terminated")
+	logger.HandleErr(err)
 	wd, err := os.Getwd()
 	logger.HandleErr(err)
+	// err = cli.waitPod(ctx, podName, LwWhite, v1.PodRunning)
+	// logger.HandleErr(err)
 	err = copyFromPod(cli, "/output/output", wd+"/output", pod)
 	logger.HandleErr(err)
 
