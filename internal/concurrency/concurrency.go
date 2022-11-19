@@ -33,9 +33,9 @@ func runStageGroupDocker(wg *sync.WaitGroup, stageIDs []string, cli *client.Clie
 }
 
 // cli, wg, layer, cli, ctx, w, vol, allOutputs, &skippedStages
-func runStageGroupKubernetes(cli *kubengine.Client, wg *sync.WaitGroup, stageIDs []string, ctx context.Context, w engine.Workflow, vol *v1.PersistentVolume, allOutputs map[string][]engine.Env, skippedStages *[]string) {
+func runStageGroupKubernetes(cli *kubengine.Client, wg *sync.WaitGroup, stageIDs []string, ctx context.Context, w engine.Workflow, vol string, claim *v1.PersistentVolumeClaim, allOutputs map[string][]engine.Env, skippedStages *[]string) {
 	for _, id := range stageIDs {
-		go cli.KubeEngine(wg, id, ctx, w, vol, allOutputs, skippedStages)
+		go cli.KubeEngine(wg, id, ctx, w, vol, claim, allOutputs, skippedStages)
 	}
 }
 
@@ -43,7 +43,7 @@ func ToGraph(w engine.Workflow) {
 	skippedStages := make([]string, 0)
 	ctx := context.Background()
 	k8s := viper.GetBool("kubernetes")
-
+	fmt.Println("k8s", k8s)
 	if !k8s {
 		cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 		logger.HandleErr(err)
@@ -71,9 +71,9 @@ func ToGraph(w engine.Workflow) {
 	} else {
 		cli, err := kubengine.NewClient()
 		logger.HandleErr(err)
-
-		vol := cli.CreateVolume(ctx, w.Mount)
-		defer cli.RemoveVolume(ctx, vol)
+		defer cli.DeleteNamespace(ctx)
+		vol, claim := cli.CreateVolume(ctx, w.Mount)
+		defer cli.RemoveVolume(ctx, vol, claim)
 
 		allOutputs := make(map[string][]engine.Env, 0)
 
@@ -84,7 +84,7 @@ func ToGraph(w engine.Workflow) {
 			if (len(layer) > 0) && (layer[0] != "") {
 				fmt.Printf("Running in Parallel: %s\n", strings.Join(layer, ", "))
 				wg.Add(len(layer))
-				go runStageGroupKubernetes(cli, wg, layer, ctx, w, vol, allOutputs, &skippedStages)
+				go runStageGroupKubernetes(cli, wg, layer, ctx, w, vol, claim, allOutputs, &skippedStages)
 				wg.Wait()
 			}
 		}
