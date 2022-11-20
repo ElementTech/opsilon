@@ -25,7 +25,7 @@ func App(port int64) {
 	e.GET("/list", list)
 	e.GET("/repo/list", rlist)
 	e.POST("/repo/add", radd)
-	e.DELETE("/repo/delete/:repository", rdelete)
+	e.DELETE("/repo/delete/:repo", rdelete)
 	// Start server
 	e.Logger.Fatal(e.Start(":" + fmt.Sprint(port)))
 }
@@ -70,7 +70,7 @@ func radd(c echo.Context) error {
 }
 
 func rdelete(c echo.Context) error {
-	repository := c.Param("repository")
+	repository := c.Param("repo")
 	if err := repo.Delete([]string{repository}); err != nil {
 		return c.String(http.StatusBadRequest, err.Error())
 	}
