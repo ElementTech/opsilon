@@ -22,6 +22,7 @@ input:
   - name: arg1
   - name: arg2
     default: defaultvalue
+    optional: true
   - name: arg3
     optional: true # If skipped in the CLI input phase, will default to an empty string [($arg3 == "") == true]
 
@@ -44,9 +45,13 @@ stages:
       - -c
       - |
         echo "Starting Stage"
+        ls -l
         echo "exportedArg=i_am_an_output" >> $OUTPUT
+        ls -l $OUTPUT
+        cat $OUTPUT
         mkdir testdir1
         echo $arg3 >> testdir1/test.txt
+        echo "Stage Ended"
     artifacts: # Will be saved to the Working Directory where opsilon CLI was run from.
       - testdir1
       - test.txt # Will not exist, the runner will ignore this and print a warning.
@@ -60,15 +65,31 @@ stages:
       - -c
       - |
         mkdir testdir2
+        echo "I am another stage"
         echo $exportedArg >> testdir2/test.txt
         ls -l
     artifacts:
       - testdir2 # Copies files inside it.
       - testdir2/test.txt # It has no effect to copy file twice.
+  - stage: write a file
+    id: writefile3
+    needs: writefile # Will get the outputs of the stage with this ID. Comma Separated list of stage IDs
+    clean: false # Enabling this will make this stage will not share a filesystem with the other stages. It will start with a clean /app as working directory.
+    if: $exportedArg == "i_am_an_output" # Run only if the output of the step it needs is equal this string.
+    script:
+      - sh
+      - -c
+      - |
+        mkdir testdir3
+        echo "I am another stage"
+        echo $exportedArg >> testdir3/test.txt
+        ls -l
+    artifacts:
+      - testdir3 # Copies files inside it.
   - stage: read the file
     id: readfile
-    needs: writefile,writefile2 # Comma Separated list of stage IDs
-    if: $exportedArg == "i_am_an_output"
+    needs: writefile3 # Comma Separated list of stage IDs
+    if: $exportedArg == "wrong_output"
     script:
       - sh
       - -c
@@ -167,6 +188,7 @@ Flags:
   -a, --args stringToString   Comma separated list of key=value arguments for the workflow input (default [])
       --confirm               Start running without confirmation
   -h, --help                  help for run
+      --kubernetes            Run in Kubernetes instead of Docker. You must be connected to a Kubernetes Context
   -r, --repo string           Repository Name
   -w, --workflow string       ID of the workflow to run
 
@@ -232,5 +254,5 @@ Running in Parallel: readfile
 And so we have chosen and ran our workflow! We could have done the same thing automatically without prompt with the following command:
 
 ```sh
-$> opsilon run -r example_repo_git -w example-full --confirm -a "arg1=something,arg2=something,arg3=something" #arg2 has a default, we can choose to override.
+$> opsilon run -r example_repo_git -w example-full --confirm -a "arg1=something,arg3=something" #arg2 has a default, we can choose to override.
 ```

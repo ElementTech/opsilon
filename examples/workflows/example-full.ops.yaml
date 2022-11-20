@@ -17,6 +17,7 @@ input:
   - name: arg1
   - name: arg2
     default: defaultvalue
+    optional: true
   - name: arg3
     optional: true # If skipped in the CLI input phase, will default to an empty string [($arg3 == "") == true]
 
