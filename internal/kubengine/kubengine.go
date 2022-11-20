@@ -139,7 +139,7 @@ func (c *Client) CreateVolume(ctx context.Context, mount bool) (string, *v1.Pers
 
 func (c *Client) RemoveVolume(ctx context.Context, vol string, claim *v1.PersistentVolumeClaim) {
 	recover()
-	deletePolicy := metav1.DeletePropagationForeground
+	deletePolicy := metav1.DeletePropagationBackground
 	deleteOptions := metav1.DeleteOptions{
 		PropagationPolicy: &deletePolicy,
 	}
@@ -230,9 +230,13 @@ func (c *Client) GetPodStdOut(ctx context.Context, name string) (string, error) 
 
 func (c *Client) DeletePod(ctx context.Context, name string) error {
 	recover()
+	deletePolicy := metav1.DeletePropagationBackground
+	deleteOptions := metav1.DeleteOptions{
+		PropagationPolicy: &deletePolicy,
+	}
 	return c.k8s.CoreV1().
 		Pods(c.ns).
-		Delete(ctx, name, metav1.DeleteOptions{})
+		Delete(ctx, name, deleteOptions)
 }
 
 // func (c *Client) DeleteNamespace(ctx context.Context) {

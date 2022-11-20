@@ -88,6 +88,6 @@ func ToGraph(w engine.Workflow) {
 			}
 		}
 
-		defer cli.RemoveVolume(ctx, vol, claim)
+		go cli.RemoveVolume(ctx, vol, claim)
 	}
 }
