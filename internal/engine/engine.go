@@ -167,7 +167,7 @@ func RunStage(s Stage, ctx context.Context, cli *client.Client, envs []Env, glob
 	}, &hostConfig, nil, nil, "")
 	logger.HandleErr(err)
 
-	defer extractArtifacts(dir, s)
+	defer ExtractArtifacts(dir, s)
 	defer ContainerClean(resp.ID, ctx, cli)
 
 	if err := cli.ContainerStart(ctx, resp.ID, types.ContainerStartOptions{}); err != nil {
@@ -371,7 +371,7 @@ func EvaluateCondition(condition string, availableValues []Env, LwWhite *logger.
 	return true
 }
 
-func extractArtifacts(path string, s Stage) {
+func ExtractArtifacts(path string, s Stage) {
 	white := color.New(color.FgWhite).SprintFunc()
 
 	LwOperation := log.New(logger.NewLogWriter(func(str string, col color.Attribute) {

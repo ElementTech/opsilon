@@ -39,6 +39,7 @@ stages:
       - -c
       - |
         echo "Starting Stage"
+        ls -l
         echo "exportedArg=i_am_an_output" >> $OUTPUT
         ls -l $OUTPUT
         cat $OUTPUT
@@ -64,6 +65,21 @@ stages:
     artifacts:
       - testdir2 # Copies files inside it.
       - testdir2/test.txt # It has no effect to copy file twice.
+  - stage: write a file
+    id: writefile3
+    needs: writefile # Will get the outputs of the stage with this ID. Comma Separated list of stage IDs
+    clean: false # Enabling this will make this stage will not share a filesystem with the other stages. It will start with a clean /app as working directory.
+    if: $exportedArg == "i_am_an_output" # Run only if the output of the step it needs is equal this string.
+    script:
+      - sh
+      - -c
+      - |
+        mkdir testdir3
+        echo "I am another stage"
+        echo $exportedArg >> testdir3/test.txt
+        ls -l
+    artifacts:
+      - testdir3 # Copies files inside it.
   - stage: read the file
     id: readfile
     needs: writefile,writefile2 # Comma Separated list of stage IDs

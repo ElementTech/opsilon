@@ -3,6 +3,7 @@ package kubengine
 import (
 	"archive/tar"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -14,6 +15,9 @@ import (
 	"sync"
 	"time"
 
+	_ "unsafe"
+
+	"github.com/fatih/color"
 	"github.com/google/uuid"
 	"github.com/jatalocks/opsilon/internal/engine"
 	"github.com/jatalocks/opsilon/internal/logger"
@@ -27,6 +31,7 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/remotecommand"
+	_ "k8s.io/kubectl/pkg/cmd/cp"
 	"k8s.io/kubectl/pkg/scheme"
 )
 
@@ -61,7 +66,7 @@ func (c *Client) CreateVolume(ctx context.Context, mount bool) (string, *v1.Pers
 			AccessModes: []v1.PersistentVolumeAccessMode{v1.ReadWriteOnce},
 			Resources: v1.ResourceRequirements{
 				Requests: v1.ResourceList{
-					v1.ResourceName(v1.ResourceStorage): resource.MustParse("10Gi"),
+					v1.ResourceName(v1.ResourceStorage): resource.MustParse("1Gi"),
 				},
 			},
 			VolumeMode: &fs,
@@ -70,7 +75,7 @@ func (c *Client) CreateVolume(ctx context.Context, mount bool) (string, *v1.Pers
 			Phase:       v1.ClaimBound,
 			AccessModes: []v1.PersistentVolumeAccessMode{v1.ReadWriteOnce},
 			Capacity: v1.ResourceList{
-				v1.ResourceName(v1.ResourceStorage): resource.MustParse("10Gi"),
+				v1.ResourceName(v1.ResourceStorage): resource.MustParse("1Gi"),
 			},
 		},
 	}
@@ -79,31 +84,88 @@ func (c *Client) CreateVolume(ctx context.Context, mount bool) (string, *v1.Pers
 	claim, errGo := api.PersistentVolumeClaims(c.ns).Create(ctx, createOpts, metav1.CreateOptions{})
 	logger.HandleErr(errGo)
 
+	if mount {
+		wd, err := os.Getwd()
+		logger.HandleErr(err)
+
+		VolumeMounts := []v1.VolumeMount{{Name: volumeName, MountPath: "/app"}}
+		Volumes := []v1.Volume{{
+			Name:         volumeName,
+			VolumeSource: v1.VolumeSource{PersistentVolumeClaim: &v1.PersistentVolumeClaimVolumeSource{ClaimName: claim.Name}},
+		}}
+
+		string_uuid := (uuid.New()).String()
+
+		pod := &v1.Pod{
+			ObjectMeta: metav1.ObjectMeta{Name: string_uuid},
+			Spec: v1.PodSpec{
+				RestartPolicy: v1.RestartPolicyNever,
+				Volumes:       Volumes,
+				Containers: []v1.Container{
+					v1.Container{
+						Name:         "keepalive",
+						Image:        "busybox",
+						Command:      []string{"/bin/sh"},
+						Args:         []string{"-c", fmt.Sprintf("until ((ls /%s)); do echo sleeping; sleep 1; done;cp -r /%s/. ./;find / -path '*/%s/*' -delete", path.Base(wd), path.Base(wd), path.Base(wd))},
+						WorkingDir:   "/app",
+						VolumeMounts: VolumeMounts,
+					},
+				},
+			},
+		}
+
+		defer c.DeletePod(ctx, string_uuid)
+
+		_, err = c.k8s.CoreV1().
+			Pods(c.ns).
+			Create(ctx, pod, metav1.CreateOptions{})
+		logger.HandleErr(err)
+		LwWhite := logger.NewLogWriter(func(str string, color color.Attribute) {
+			logger.Custom(color, fmt.Sprintf("[%s] %s", "Mounting working directory to volume", str))
+		}, color.FgWhite)
+
+		err = c.waitPod(ctx, string_uuid, LwWhite, "Terminated") // terminated == running in this case. because mounter does not have init containers.
+		logger.HandleErr(err)
+
+		copyToPod(c, wd, "/", string_uuid, ctx)
+
+		err = c.waitPod(ctx, string_uuid, LwWhite, "Mounted") // terminated == running in this case. because mounter does not have init containers.
+		logger.HandleErr(err)
+
+	}
+
 	return volumeName, claim
 }
 
 func (c *Client) RemoveVolume(ctx context.Context, vol string, claim *v1.PersistentVolumeClaim) {
+	recover()
 	deletePolicy := metav1.DeletePropagationForeground
 	deleteOptions := metav1.DeleteOptions{
 		PropagationPolicy: &deletePolicy,
 	}
-	c.k8s.CoreV1().PersistentVolumeClaims(c.ns).Delete(ctx, claim.Name, deleteOptions)
-	c.k8s.CoreV1().PersistentVolumes().Delete(ctx, vol, deleteOptions)
+	go c.k8s.CoreV1().PersistentVolumeClaims(c.ns).Delete(ctx, claim.Name, deleteOptions)
+	go c.k8s.CoreV1().PersistentVolumes().Delete(ctx, vol, deleteOptions)
 }
 
 func (c *Client) CreatePod(ctx context.Context, name string, image string, command []string, envs []engine.Env, volume string, claim *v1.PersistentVolumeClaim, volumeOutput string, claimOutput *v1.PersistentVolumeClaim) (error, v1.Pod) {
 	envVar := ToV1Env(envs)
+	VolumeMounts := []v1.VolumeMount{{Name: volume, MountPath: "/app"}}
+	Volumes := []v1.Volume{{
+		Name:         volume,
+		VolumeSource: v1.VolumeSource{PersistentVolumeClaim: &v1.PersistentVolumeClaimVolumeSource{ClaimName: claim.Name}},
+	}}
+	if volumeOutput != "" {
+		VolumeMounts = append(VolumeMounts, v1.VolumeMount{Name: volumeOutput, MountPath: "/output", SubPath: "output"})
+		Volumes = append(Volumes, v1.Volume{
+			Name:         volumeOutput,
+			VolumeSource: v1.VolumeSource{PersistentVolumeClaim: &v1.PersistentVolumeClaimVolumeSource{ClaimName: claimOutput.Name}},
+		})
+	}
 	pod := &v1.Pod{
 		ObjectMeta: metav1.ObjectMeta{Name: name},
 		Spec: v1.PodSpec{
 			RestartPolicy: v1.RestartPolicyNever,
-			Volumes: []v1.Volume{{
-				Name:         volume,
-				VolumeSource: v1.VolumeSource{PersistentVolumeClaim: &v1.PersistentVolumeClaimVolumeSource{ClaimName: claim.Name}},
-			}, {
-				Name:         volumeOutput,
-				VolumeSource: v1.VolumeSource{PersistentVolumeClaim: &v1.PersistentVolumeClaimVolumeSource{ClaimName: claimOutput.Name}},
-			}},
+			Volumes:       Volumes,
 			InitContainers: []v1.Container{
 				v1.Container{
 					Name:         "main",
@@ -111,7 +173,7 @@ func (c *Client) CreatePod(ctx context.Context, name string, image string, comma
 					Command:      command,
 					WorkingDir:   "/app",
 					Env:          *envVar,
-					VolumeMounts: []v1.VolumeMount{{Name: volume, MountPath: "/app"}, {Name: volumeOutput, MountPath: "/output", SubPath: "output"}},
+					VolumeMounts: VolumeMounts,
 				},
 			},
 			Containers: []v1.Container{
@@ -120,7 +182,7 @@ func (c *Client) CreatePod(ctx context.Context, name string, image string, comma
 					Image:        "busybox",
 					Command:      []string{"/bin/sh", "-c", "sleep 60"},
 					WorkingDir:   "/app",
-					VolumeMounts: []v1.VolumeMount{{Name: volume, MountPath: "/app"}, {Name: volumeOutput, MountPath: "/output", SubPath: "output"}},
+					VolumeMounts: VolumeMounts,
 				},
 			},
 		},
@@ -167,19 +229,20 @@ func (c *Client) GetPodStdOut(ctx context.Context, name string) (string, error) 
 }
 
 func (c *Client) DeletePod(ctx context.Context, name string) error {
+	recover()
 	return c.k8s.CoreV1().
 		Pods(c.ns).
 		Delete(ctx, name, metav1.DeleteOptions{})
 }
 
-func (c *Client) DeleteNamespace(ctx context.Context) {
-	deletePolicy := metav1.DeletePropagationForeground
-	deleteOptions := metav1.DeleteOptions{
-		PropagationPolicy: &deletePolicy,
-	}
-	err := c.k8s.CoreV1().Namespaces().Delete(ctx, c.ns, deleteOptions)
-	logger.HandleErr(err)
-}
+// func (c *Client) DeleteNamespace(ctx context.Context) {
+// 	deletePolicy := metav1.DeletePropagationForeground
+// 	deleteOptions := metav1.DeleteOptions{
+// 		PropagationPolicy: &deletePolicy,
+// 	}
+// 	err := c.k8s.CoreV1().Namespaces().Delete(ctx, c.ns, deleteOptions)
+// 	logger.HandleErr(err)
+// }
 
 func NewClient() (*Client, error) {
 
@@ -197,15 +260,19 @@ func NewClient() (*Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	string_uuid := (uuid.New()).String()
-	ns := &v1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: string_uuid,
-		},
+	clientCfg, _ := clientcmd.NewDefaultClientConfigLoadingRules().Load()
+	namespace := clientCfg.Contexts[clientCfg.CurrentContext].Namespace
+
+	if namespace == "" {
+		namespace = "default"
 	}
-	k8s.CoreV1().Namespaces().Create(context.Background(), ns, metav1.CreateOptions{})
-	return &Client{k8s: k8s, ns: ns.Name, config: *config}, nil
+	return &Client{k8s: k8s, ns: namespace, config: *config}, nil
 }
+
+func toPodName(stage engine.Stage) string {
+	return strings.ReplaceAll(clearString(fmt.Sprint(stage.Stage+"-"+stage.ID)), " ", "-")
+}
+
 func (cli *Client) KubeEngine(wg *sync.WaitGroup, sID string, ctx context.Context, w engine.Workflow, vol string, claim *v1.PersistentVolumeClaim, allOutputs map[string][]engine.Env, skippedStages *[]string) {
 	defer wg.Done()
 
@@ -235,6 +302,7 @@ func (cli *Client) KubeEngine(wg *sync.WaitGroup, sID string, ctx context.Contex
 		} else {
 			if stage.Clean {
 				volClean, claimClean := cli.CreateVolume(ctx, false)
+				defer cli.RemoveVolume(ctx, volClean, claimClean)
 				cli.RunStageKubernetes(stage, ctx, allEnvs, w.Image, volClean, claimClean, volOutput, claimOutput, LwWhite)
 			} else {
 				cli.RunStageKubernetes(stage, ctx, allEnvs, w.Image, vol, claim, volOutput, claimOutput, LwWhite)
@@ -243,30 +311,23 @@ func (cli *Client) KubeEngine(wg *sync.WaitGroup, sID string, ctx context.Contex
 
 	}
 
-	// outputMap, err := ReadPropertiesFile(outputPath)
+	dirOutput, err := os.MkdirTemp("", "output")
+	logger.HandleErr(err)
+	defer os.RemoveAll(dirOutput)
+	outputPath := path.Join(dirOutput, "output")
+	// err = cli.waitPod(ctx, podName, LwWhite, v1.PodRunning)
 	// logger.HandleErr(err)
-	// allOutputs[stage.ID] = outputMap
+	podName := toPodName(stage)
+	err = copyFromPod(cli, "/output/output", outputPath, podName)
+	if err == nil {
+		outputMap, err := engine.ReadPropertiesFile(path.Join(outputPath, "output"))
+		if err == nil {
+			allOutputs[stage.ID] = outputMap
+		}
+	} else {
+		logger.Error(err.Error())
+	}
 
-	// err := cli.CreatePod(
-	// 	ctx,
-	// 	"rtw",
-	// 	"python:3.8",
-	// 	"python",
-	// 	[]string{"-c", "print(\"hello world\")"},
-	// )
-	// logger.HandleErr(err)
-	// exitCode, err := cli.GetPodExitCode(ctx, "rtw")
-	// logger.HandleErr(err)
-	// logger.HandleErr(err)
-	// stdout, err := cli.GetPodStdOut(ctx, "rtw")
-	// logger.HandleErr(err)
-	// go func() {
-	// 	if err := cli.DeletePod(ctx, "rtw"); err != nil {
-	// 		log.Printf("Error deleting pod: %v", err)
-	// 	}
-	// }()
-	// logger.Info(fmt.Sprint(exitCode))
-	// logger.Free(stdout)
 }
 
 func ToV1Env(envs []engine.Env) *[]v1.EnvVar {
@@ -307,19 +368,25 @@ func (c *Client) waitPod(ctx context.Context, resName string, LwWhite *logger.My
 		case event := <-watcher.ResultChan():
 			pod := event.Object.(*v1.Pod)
 			if state == "Running" {
-				if pod.Status.InitContainerStatuses[0].State.Running != nil {
-					return nil
-				}
-			} else if state == "Terminated" {
-				if pod.Status.InitContainerStatuses[0].State.Terminated != nil {
-					return nil
-				}
-			} else if state == "Pod" {
-				fmt.Println(pod.Status.Phase, pod.Status.ContainerStatuses)
-				if pod.Status.Phase == v1.PodRunning {
-					if pod.Status.ContainerStatuses[0].State.Running != nil {
+				if len(pod.Status.InitContainerStatuses) > 0 {
+					if pod.Status.InitContainerStatuses[0].State.Waiting == nil {
 						return nil
 					}
+				}
+
+			} else if state == "Terminated" {
+				if pod.Status.Phase == v1.PodRunning {
+					return nil
+				}
+				if pod.Status.Phase == v1.PodFailed {
+					return errors.New("script failed")
+				}
+			} else if state == "Mounted" {
+				if pod.Status.Phase == v1.PodSucceeded {
+					return nil
+				}
+				if pod.Status.Phase == v1.PodFailed {
+					return errors.New("mounting failed")
 				}
 			}
 			// LwWhite.Write([]byte(fmt.Sprintf("The POD \"%s\" is running/success\n", resName)))
@@ -336,9 +403,10 @@ func (c *Client) getPodLogs(ctx context.Context, podName string, LwWhite *logger
 	podLogOptions := v1.PodLogOptions{
 		Follow:    true,
 		TailLines: &count,
+		Container: "main",
 	}
 
-	err := c.waitPod(ctx, podName, LwWhite, "Pod")
+	err := c.waitPod(ctx, podName, LwWhite, "Running")
 	logger.HandleErr(err)
 
 	podLogRequest := c.k8s.CoreV1().
@@ -374,15 +442,8 @@ func (cli *Client) RunStageKubernetes(s engine.Stage, ctx context.Context, envs 
 		globalImage = s.Image
 	}
 
-	// resp, err := cli.ContainerCreate(ctx, &container.Config{
-	// 	Image:      globalImage,
-	// 	Env:        allEnvs,
-	// 	Cmd:        s.Script,
-	// 	WorkingDir: "/app",
-	// 	Tty:        false,
-	// }, &hostConfig, nil, nil, "")
-	podName := strings.ReplaceAll(clearString(fmt.Sprint(s.Stage+"-"+s.ID)), " ", "-")
-	err, pod := cli.CreatePod(
+	podName := toPodName(s)
+	err, _ := cli.CreatePod(
 		ctx,
 		podName,
 		globalImage,
@@ -393,31 +454,90 @@ func (cli *Client) RunStageKubernetes(s engine.Stage, ctx context.Context, envs 
 		volumeOutput,
 		claimOutput,
 	)
+
+	defer cli.DeletePod(ctx, podName)
+
 	logger.HandleErr(err)
+
 	// exitCode, err := cli.GetPodExitCode(ctx, podName)
 	// logger.HandleErr(err)
 	err = cli.getPodLogs(ctx, podName, LwWhite)
 	logger.HandleErr(err)
 	err = cli.waitPod(ctx, podName, LwWhite, "Terminated")
 	logger.HandleErr(err)
-	wd, err := os.Getwd()
+
+	dirArt, err := os.MkdirTemp("", "artifacts")
 	logger.HandleErr(err)
+	defer os.RemoveAll(dirArt)
 	// err = cli.waitPod(ctx, podName, LwWhite, v1.PodRunning)
 	// logger.HandleErr(err)
-	err = copyFromPod(cli, "/output/output", wd+"/output", pod)
+	err = copyFromPod(cli, "/app", path.Join(dirArt, "app"), podName)
 	logger.HandleErr(err)
 
-	go func() {
-		if err := cli.DeletePod(ctx, podName); err != nil {
-			log.Printf("Error deleting pod: %v", err)
-		}
-	}()
+	engine.ExtractArtifacts(dirArt, s)
+
 	// logger.Info(fmt.Sprint(exitCode))
 }
 func getPrefix(file string) string {
 	return strings.TrimLeft(file, "/")
 }
-func copyFromPod(cli *Client, srcPath string, destPath string, i v1.Pod) error {
+
+//go:linkname cpMakeTar k8s.io/kubectl/pkg/cmd/cp.makeTar
+func cpMakeTar(srcPath, destPath string, writer io.Writer) error
+
+func copyToPod(cli *Client, srcPath string, destPath string, podName string, ctx context.Context) error {
+	restconfig := cli.config
+
+	reader, writer := io.Pipe()
+	if destPath != "/" && strings.HasSuffix(string(destPath[len(destPath)-1]), "/") {
+		destPath = destPath[:len(destPath)-1]
+	}
+	destPath = destPath + "/" + path.Base(srcPath)
+	go func() {
+		defer writer.Close()
+		err := cpMakeTar(srcPath, destPath, writer)
+		logger.HandleErr(err)
+	}()
+	cmdArr := []string{"tar", "-xf", "-"}
+	destDir := path.Dir(destPath)
+	if len(destDir) > 0 {
+		cmdArr = append(cmdArr, "-C", destDir)
+	}
+	//remote shell.
+	req := cli.k8s.CoreV1().RESTClient().
+		Post().
+		Namespace(cli.ns).
+		Resource("pods").
+		Name(podName).
+		SubResource("exec").
+		VersionedParams(&v1.PodExecOptions{
+			Container: "keepalive",
+			Command:   cmdArr,
+			Stdin:     true,
+			Stdout:    true,
+			Stderr:    true,
+			TTY:       false,
+		}, scheme.ParameterCodec)
+
+	exec, err := remotecommand.NewSPDYExecutor(&restconfig, "POST", req.URL())
+	if err != nil {
+		log.Fatalf("error %s\n", err)
+		return err
+	}
+	err = exec.Stream(remotecommand.StreamOptions{
+		Stdin:  reader,
+		Stdout: os.Stdout,
+		Stderr: os.Stderr,
+		Tty:    false,
+	})
+	if err != nil {
+		log.Fatalf("error %s\n", err)
+		return err
+	}
+	return nil
+}
+
+func copyFromPod(cli *Client, srcPath string, destPath string, podName string) error {
 	restconfig := cli.config
 	reader, outStream := io.Pipe()
 	//todo some containers failed : tar: Refusing to write archive contents to terminal (missing -f option?) when execute `tar cf -` in container
@@ -425,10 +545,10 @@ func copyFromPod(cli *Client, srcPath string, destPath string, i v1.Pod) error {
 	req := cli.k8s.CoreV1().RESTClient().Get().
 		Namespace(cli.ns).
 		Resource("pods").
-		Name(i.Name).
+		Name(podName).
 		SubResource("exec").
 		VersionedParams(&v1.PodExecOptions{
-			Container: i.Spec.Containers[0].Name,
+			Container: "keepalive",
 			Command:   cmdArr,
 			Stdin:     true,
 			Stdout:    true,
@@ -437,7 +557,6 @@ func copyFromPod(cli *Client, srcPath string, destPath string, i v1.Pod) error {
 		}, scheme.ParameterCodec)
 	exec, err := remotecommand.NewSPDYExecutor(&restconfig, "POST", req.URL())
 	if err != nil {
-		log.Fatalf("error %s\n", err)
 		return err
 	}
 	go func() {
@@ -448,36 +567,18 @@ func copyFromPod(cli *Client, srcPath string, destPath string, i v1.Pod) error {
 			Stderr: os.Stderr,
 			Tty:    false,
 		})
-		logger.HandleErr(err)
+		fmt.Printf("error %s\n", err)
 	}()
 	prefix := getPrefix(srcPath)
 	prefix = path.Clean(prefix)
-	prefix = stripPathShortcuts(prefix)
+	prefix = cpStripPathShortcuts(prefix)
 	destPath = path.Join(destPath, path.Base(prefix))
 	err = untarAll(reader, destPath, prefix)
 	return err
 }
 
-func stripPathShortcuts(p string) string {
-	newPath := p
-	trimmed := strings.TrimPrefix(newPath, "../")
-
-	for trimmed != newPath {
-		newPath = trimmed
-		trimmed = strings.TrimPrefix(newPath, "../")
-	}
-
-	// trim leftover {".", ".."}
-	if newPath == "." || newPath == ".." {
-		newPath = ""
-	}
-
-	if len(newPath) > 0 && string(newPath[0]) == "/" {
-		return newPath[1:]
-	}
-
-	return newPath
-}
+//go:linkname cpStripPathShortcuts k8s.io/kubectl/pkg/cmd/cp.stripPathShortcuts
+func cpStripPathShortcuts(p string) string
 
 func untarAll(reader io.Reader, destDir, prefix string) error {
 	tarReader := tar.NewReader(reader)

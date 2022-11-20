@@ -71,7 +71,7 @@ func ToGraph(w engine.Workflow) {
 	} else {
 		cli, err := kubengine.NewClient()
 		logger.HandleErr(err)
-		defer cli.DeleteNamespace(ctx)
+		// defer cli.DeleteNamespace(ctx)
 		vol, claim := cli.CreateVolume(ctx, w.Mount)
 		defer cli.RemoveVolume(ctx, vol, claim)
 
