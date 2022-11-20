@@ -208,7 +208,6 @@ func ReadPropertiesFile(filename string) ([]Env, error) {
 	}
 	file, err := os.Open(filename)
 	if err != nil {
-		log.Fatal(err)
 		return nil, err
 	}
 	defer file.Close()
@@ -228,7 +227,6 @@ func ReadPropertiesFile(filename string) ([]Env, error) {
 	}
 
 	if err := scanner.Err(); err != nil {
-		log.Fatal(err)
 		return nil, err
 	}
 

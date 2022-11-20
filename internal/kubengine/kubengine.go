@@ -106,7 +106,7 @@ func (c *Client) CreateVolume(ctx context.Context, mount bool) (string, *v1.Pers
 						Name:         "keepalive",
 						Image:        "busybox",
 						Command:      []string{"/bin/sh"},
-						Args:         []string{"-c", fmt.Sprintf("until ((ls /%s)); do echo sleeping; sleep 1; done;cp -r /%s/. ./;find / -path '*/%s/*' -delete", path.Base(wd), path.Base(wd), path.Base(wd))},
+						Args:         []string{"-c", fmt.Sprintf("until ((ls /%s)); do echo sleeping; sleep 2; done;cp -r /%s/. ./;find / -path '*/%s/*' -delete;rm -rf /app/lost+found", path.Base(wd), path.Base(wd), path.Base(wd))},
 						WorkingDir:   "/app",
 						VolumeMounts: VolumeMounts,
 					},
@@ -129,7 +129,7 @@ func (c *Client) CreateVolume(ctx context.Context, mount bool) (string, *v1.Pers
 
 		copyToPod(c, wd, "/", string_uuid, ctx)
 
-		err = c.waitPod(ctx, string_uuid, LwWhite, "Mounted") // terminated == running in this case. because mounter does not have init containers.
+		err = c.waitPod(ctx, string_uuid, LwWhite, "Mounted")
 		logger.HandleErr(err)
 
 	}
@@ -471,10 +471,11 @@ func (cli *Client) RunStageKubernetes(s engine.Stage, ctx context.Context, envs 
 	defer os.RemoveAll(dirArt)
 	// err = cli.waitPod(ctx, podName, LwWhite, v1.PodRunning)
 	// logger.HandleErr(err)
-	err = copyFromPod(cli, "/app", path.Join(dirArt, "app"), podName)
-	logger.HandleErr(err)
-
-	engine.ExtractArtifacts(dirArt, s)
+	if len(s.Artifacts) > 0 {
+		err = copyFromPod(cli, "/app", dirArt, podName)
+		logger.HandleErr(err)
+		engine.ExtractArtifacts(path.Join(dirArt, "app"), s)
+	}
 
 	// logger.Info(fmt.Sprint(exitCode))
 }
@@ -496,7 +497,9 @@ func copyToPod(cli *Client, srcPath string, destPath string, podName string, ctx
 	go func() {
 		defer writer.Close()
 		err := cpMakeTar(srcPath, destPath, writer)
-		logger.HandleErr(err)
+		if err != nil {
+			fmt.Println(err.Error())
+		}
 	}()
 	cmdArr := []string{"tar", "-xf", "-"}
 	destDir := path.Dir(destPath)
