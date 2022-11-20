@@ -114,7 +114,12 @@ func (c *Client) CreateVolume(ctx context.Context, mount bool) (string, *v1.Pers
 			},
 		}
 
-		defer c.DeletePod(ctx, string_uuid)
+		defer func() {
+			recover()
+			if err := c.DeletePod(ctx, string_uuid); err != nil {
+				log.Printf("Error deleting pod: %v", err)
+			}
+		}()
 
 		_, err = c.k8s.CoreV1().
 			Pods(c.ns).
@@ -139,12 +144,15 @@ func (c *Client) CreateVolume(ctx context.Context, mount bool) (string, *v1.Pers
 
 func (c *Client) RemoveVolume(ctx context.Context, vol string, claim *v1.PersistentVolumeClaim) {
 	recover()
-	deletePolicy := metav1.DeletePropagationBackground
+	deletePolicy := metav1.DeletePropagationForeground
 	deleteOptions := metav1.DeleteOptions{
 		PropagationPolicy: &deletePolicy,
 	}
-	go c.k8s.CoreV1().PersistentVolumeClaims(c.ns).Delete(ctx, claim.Name, deleteOptions)
-	go c.k8s.CoreV1().PersistentVolumes().Delete(ctx, vol, deleteOptions)
+
+	err := c.k8s.CoreV1().PersistentVolumeClaims(c.ns).Delete(ctx, claim.Name, deleteOptions)
+	fmt.Println(err)
+	// err = c.k8s.CoreV1().PersistentVolumes().Delete(ctx, vol, deleteOptions)
+	// fmt.Println(err)
 }
 
 func (c *Client) CreatePod(ctx context.Context, name string, image string, command []string, envs []engine.Env, volume string, claim *v1.PersistentVolumeClaim, volumeOutput string, claimOutput *v1.PersistentVolumeClaim) (error, v1.Pod) {
@@ -306,32 +314,30 @@ func (cli *Client) KubeEngine(wg *sync.WaitGroup, sID string, ctx context.Contex
 		} else {
 			if stage.Clean {
 				volClean, claimClean := cli.CreateVolume(ctx, false)
-				defer cli.RemoveVolume(ctx, volClean, claimClean)
 				cli.RunStageKubernetes(stage, ctx, allEnvs, w.Image, volClean, claimClean, volOutput, claimOutput, LwWhite)
+				defer cli.RemoveVolume(ctx, volClean, claimClean)
 			} else {
 				cli.RunStageKubernetes(stage, ctx, allEnvs, w.Image, vol, claim, volOutput, claimOutput, LwWhite)
 			}
 		}
 
-	}
-
-	dirOutput, err := os.MkdirTemp("", "output")
-	logger.HandleErr(err)
-	defer os.RemoveAll(dirOutput)
-	outputPath := path.Join(dirOutput, "output")
-	// err = cli.waitPod(ctx, podName, LwWhite, v1.PodRunning)
-	// logger.HandleErr(err)
-	podName := toPodName(stage)
-	err = copyFromPod(cli, "/output/output", outputPath, podName)
-	if err == nil {
-		outputMap, err := engine.ReadPropertiesFile(path.Join(outputPath, "output"))
+		dirOutput, err := os.MkdirTemp("", "output")
+		logger.HandleErr(err)
+		defer os.RemoveAll(dirOutput)
+		outputPath := path.Join(dirOutput, "output")
+		// err = cli.waitPod(ctx, podName, LwWhite, v1.PodRunning)
+		// logger.HandleErr(err)
+		podName := toPodName(stage)
+		err = copyFromPod(cli, "/output/output", outputPath, podName)
 		if err == nil {
-			allOutputs[stage.ID] = outputMap
+			outputMap, err := engine.ReadPropertiesFile(path.Join(outputPath, "output"))
+			if err == nil {
+				allOutputs[stage.ID] = outputMap
+			}
+		} else {
+			logger.Error(err.Error())
 		}
-	} else {
-		logger.Error(err.Error())
 	}
-
 }
 
 func ToV1Env(envs []engine.Env) *[]v1.EnvVar {
@@ -458,10 +464,14 @@ func (cli *Client) RunStageKubernetes(s engine.Stage, ctx context.Context, envs 
 		volumeOutput,
 		claimOutput,
 	)
-
-	defer cli.DeletePod(ctx, podName)
-
 	logger.HandleErr(err)
+
+	defer func() {
+		recover()
+		if err := cli.DeletePod(ctx, podName); err != nil {
+			log.Printf("Error deleting pod: %v", err)
+		}
+	}()
 
 	// exitCode, err := cli.GetPodExitCode(ctx, podName)
 	// logger.HandleErr(err)

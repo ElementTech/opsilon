@@ -73,7 +73,6 @@ func ToGraph(w engine.Workflow) {
 		logger.HandleErr(err)
 		// defer cli.DeleteNamespace(ctx)
 		vol, claim := cli.CreateVolume(ctx, w.Mount)
-
 		allOutputs := make(map[string][]engine.Env, 0)
 
 		wg := new(sync.WaitGroup)
@@ -87,7 +86,7 @@ func ToGraph(w engine.Workflow) {
 				wg.Wait()
 			}
 		}
+		cli.RemoveVolume(ctx, vol, claim)
 
-		go cli.RemoveVolume(ctx, vol, claim)
 	}
 }
