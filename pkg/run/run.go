@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/fatih/color"
+	"github.com/jatalocks/opsilon/internal/concurrency"
 	"github.com/jatalocks/opsilon/internal/config"
 	"github.com/jatalocks/opsilon/internal/engine"
 	"github.com/jatalocks/opsilon/internal/get"
@@ -80,7 +81,7 @@ func Select(repoName string, workflowName string, args map[string]string, confir
 		logger.HandleErr(err)
 	}
 	if toRun {
-		engine.ToGraph(chosenAct)
+		concurrency.ToGraph(chosenAct)
 	} else {
 		fmt.Println("Run Canceled")
 	}
