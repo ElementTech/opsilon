@@ -15,16 +15,16 @@ import (
 )
 
 type Location struct {
-	Path      string `mapstructure:"path" validate:"nonzero"`
-	Type      string `mapstructure:"type" validate:"nonzero"`
-	Subfolder string `mapstructure:"subfolder,omitempty"`
-	Branch    string `mapstructure:"branch,omitempty"`
+	Path      string `json:"path" xml:"path" form:"path" query:"path" mapstructure:"path" validate:"nonzero"`
+	Type      string `json:"type" xml:"type" form:"type" query:"type" mapstructure:"type" validate:"nonzero"`
+	Subfolder string `json:"subfolder" xml:"subfolder" form:"subfolder" query:"subfolder" mapstructure:"subfolder,omitempty"`
+	Branch    string `json:"branch" xml:"branch" form:"branch" query:"branch" mapstructure:"branch,omitempty"`
 }
 
 type Repo struct {
-	Name        string   `mapstructure:"name" validate:"nonzero"`
-	Description string   `mapstructure:"description"`
-	Location    Location `mapstructure:"location" validate:"nonzero"`
+	Name        string   `json:"name" xml:"name" form:"name" query:"name" mapstructure:"name" validate:"nonzero"`
+	Description string   `json:"description" xml:"description" form:"description" query:"description" mapstructure:"description"`
+	Location    Location `json:"location" xml:"location" form:"location" query:"location" mapstructure:"location" validate:"nonzero"`
 }
 
 type RepoFile struct {

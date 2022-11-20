@@ -93,18 +93,38 @@ func Add(name string, desc string, rtype string, path string, branch string, sub
 			repo.Location.Subfolder = subfolder
 		}
 	}
-	validate.ValidateRepo(&repo)
-	fileConfig := config.GetConfigFile()
-	fileConfig.Repositories = append(fileConfig.Repositories, repo)
-	validate.ValidateRepoFile(fileConfig)
-	viper.Set("", fileConfig)
-	viper.WriteConfig()
-	config.SaveToConfig(*fileConfig)
-	viper.ReadInConfig()
-	_, err := get.GetWorkflowsForRepo([]string{repo.Name})
+	err := InsertRepositoryIfValid(repo)
 	if err != nil {
-		Delete([]string{repo.Name})
-		get.CheckIfError(err)
+		logger.HandleErr(err)
 	}
 	List()
+}
+
+func InsertRepositoryIfValid(repo config.Repo) error {
+	err := validate.ValidateRepo(&repo)
+	if err != nil {
+		return err
+	}
+	fileConfig := config.GetConfigFile()
+	fileConfig.Repositories = append(fileConfig.Repositories, repo)
+	err = validate.ValidateRepoFile(fileConfig)
+	if err != nil {
+		return err
+	}
+	viper.Set("", fileConfig)
+	err = viper.WriteConfig()
+	if err != nil {
+		return err
+	}
+	config.SaveToConfig(*fileConfig)
+	err = viper.ReadInConfig()
+	if err != nil {
+		return err
+	}
+	_, err = get.GetWorkflowsForRepo([]string{repo.Name})
+	if err != nil {
+		Delete([]string{repo.Name})
+		return err
+	}
+	return nil
 }
