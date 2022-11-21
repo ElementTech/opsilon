@@ -11,6 +11,7 @@ require (
 	github.com/google/uuid v1.3.0
 	github.com/gotesttools/gotestfmt/v2 v2.4.1
 	github.com/kendru/darwin/go/depgraph v0.0.0-20221105232959-877d6a81060c
+	github.com/labstack/echo/v4 v4.9.1
 	github.com/otiai10/copy v1.9.0
 	github.com/spf13/cobra v1.6.1
 	golang.org/x/lint v0.0.0-20210508222113-6edffad5e616
@@ -61,7 +62,6 @@ require (
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/kevinburke/ssh_config v0.0.0-20201106050909-4977a11b4351 // indirect
-	github.com/labstack/echo/v4 v4.9.1 // indirect
 	github.com/labstack/gommon v0.4.0 // indirect
 	github.com/liggitt/tabwriter v0.0.0-20181228230101-89fcab3d43de // indirect
 	github.com/mailru/easyjson v0.7.6 // indirect
