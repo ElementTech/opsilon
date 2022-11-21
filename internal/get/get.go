@@ -14,7 +14,7 @@ import (
 	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/go-git/go-git/v5/storage/memory"
 	"github.com/jatalocks/opsilon/internal/config"
-	"github.com/jatalocks/opsilon/internal/engine"
+	"github.com/jatalocks/opsilon/internal/internaltypes"
 	"github.com/jatalocks/opsilon/internal/logger"
 	"github.com/jatalocks/opsilon/internal/validate"
 	"gopkg.in/yaml.v3"
@@ -63,8 +63,8 @@ func gitCloneMemory(loc config.Location) (*git.Repository, error) {
 	}
 }
 
-func getWorkflows(location config.Location, repo string) (*[]engine.Workflow, error) {
-	data := []engine.Workflow{}
+func getWorkflows(location config.Location, repo string) (*[]internaltypes.Workflow, error) {
+	data := []internaltypes.Workflow{}
 	logger.Operation("Getting workflows from repo", repo, "in location", location.Path, "type", location.Type)
 	if location.Type == "folder" {
 		// if location.Path[0:1] == "/" {
@@ -80,7 +80,7 @@ func getWorkflows(location config.Location, repo string) (*[]engine.Workflow, er
 						if err != nil {
 							return err
 						}
-						temp := engine.Workflow{}
+						temp := internaltypes.Workflow{}
 						temp.Repo = repo
 						err2 := yaml.Unmarshal(yfile, &temp)
 						if err2 != nil {
@@ -131,7 +131,7 @@ func getWorkflows(location config.Location, repo string) (*[]engine.Workflow, er
 				if err != nil {
 					globalErr = err
 				}
-				temp := engine.Workflow{}
+				temp := internaltypes.Workflow{}
 				temp.Repo = repo
 				err2 := yaml.Unmarshal(bytes, &temp)
 				if err2 != nil {
@@ -166,7 +166,7 @@ func getWorkflows(location config.Location, repo string) (*[]engine.Workflow, er
 	return &data, nil
 }
 
-func appendToWArray(v config.Repo, workflowArray *[]engine.Workflow) error {
+func appendToWArray(v config.Repo, workflowArray *[]internaltypes.Workflow) error {
 	logger.Info("Repository", v.Name)
 	w, err := getWorkflows(v.Location, v.Name)
 	if err != nil {
@@ -180,9 +180,9 @@ func appendToWArray(v config.Repo, workflowArray *[]engine.Workflow) error {
 	return nil
 }
 
-func GetWorkflowsForRepo(repoList []string) ([]engine.Workflow, error) {
+func GetWorkflowsForRepo(repoList []string) ([]internaltypes.Workflow, error) {
 	data := config.GetConfig()
-	workflowArray := []engine.Workflow{}
+	workflowArray := []internaltypes.Workflow{}
 	skipRepoCheck := false
 	if len(repoList) == 0 {
 		skipRepoCheck = true

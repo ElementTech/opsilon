@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/jatalocks/opsilon/internal/engine"
+	"github.com/jatalocks/opsilon/internal/internaltypes"
 	"github.com/jatalocks/opsilon/internal/logger"
 	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/viper"
@@ -66,7 +66,7 @@ func StringInSlice(a string, list []string) bool {
 	return false
 }
 
-func PrintWorkflows(workflows []engine.Workflow) {
+func PrintWorkflows(workflows []internaltypes.Workflow) {
 	var data [][]string
 
 	for _, r := range workflows {

@@ -20,6 +20,7 @@ import (
 	"github.com/fatih/color"
 	"github.com/google/uuid"
 	"github.com/jatalocks/opsilon/internal/engine"
+	"github.com/jatalocks/opsilon/internal/internaltypes"
 	"github.com/jatalocks/opsilon/internal/logger"
 	"golang.org/x/exp/slices"
 	v1 "k8s.io/api/core/v1"
@@ -155,7 +156,7 @@ func (c *Client) RemoveVolume(ctx context.Context, vol string, claim *v1.Persist
 	// fmt.Println(err)
 }
 
-func (c *Client) CreatePod(ctx context.Context, name string, image string, command []string, envs []engine.Env, volume string, claim *v1.PersistentVolumeClaim, volumeOutput string, claimOutput *v1.PersistentVolumeClaim) (error, v1.Pod) {
+func (c *Client) CreatePod(ctx context.Context, name string, image string, command []string, envs []internaltypes.Env, volume string, claim *v1.PersistentVolumeClaim, volumeOutput string, claimOutput *v1.PersistentVolumeClaim) (error, v1.Pod) {
 	envVar := ToV1Env(envs)
 	VolumeMounts := []v1.VolumeMount{{Name: volume, MountPath: "/app"}}
 	Volumes := []v1.Volume{{
@@ -281,14 +282,14 @@ func NewClient() (*Client, error) {
 	return &Client{k8s: k8s, ns: namespace, config: *config}, nil
 }
 
-func toPodName(stage engine.Stage) string {
+func toPodName(stage internaltypes.Stage) string {
 	return strings.ReplaceAll(clearString(fmt.Sprint(stage.Stage+"-"+stage.ID)), " ", "-")
 }
 
-func (cli *Client) KubeEngine(wg *sync.WaitGroup, sID string, ctx context.Context, w engine.Workflow, vol string, claim *v1.PersistentVolumeClaim, allOutputs map[string][]engine.Env, skippedStages *[]string) {
+func (cli *Client) KubeEngine(wg *sync.WaitGroup, sID string, ctx context.Context, w internaltypes.Workflow, vol string, claim *v1.PersistentVolumeClaim, allOutputs map[string][]internaltypes.Env, skippedStages *[]string, results chan internaltypes.Result) {
 	defer wg.Done()
 
-	idx := slices.IndexFunc(w.Stages, func(c engine.Stage) bool { return c.ID == sID })
+	idx := slices.IndexFunc(w.Stages, func(c internaltypes.Stage) bool { return c.ID == sID })
 	stage := w.Stages[idx]
 
 	volOutput, claimOutput := cli.CreateVolume(ctx, false)
@@ -340,7 +341,7 @@ func (cli *Client) KubeEngine(wg *sync.WaitGroup, sID string, ctx context.Contex
 	}
 }
 
-func ToV1Env(envs []engine.Env) *[]v1.EnvVar {
+func ToV1Env(envs []internaltypes.Env) *[]v1.EnvVar {
 	envVar := []v1.EnvVar{}
 	for _, v := range envs {
 		envVar = append(envVar, v1.EnvVar{Name: v.Name, Value: v.Value})
@@ -445,9 +446,9 @@ func (c *Client) getPodLogs(ctx context.Context, podName string, LwWhite *logger
 	return nil
 }
 
-func (cli *Client) RunStageKubernetes(s engine.Stage, ctx context.Context, envs []engine.Env, globalImage string, volume string, claim *v1.PersistentVolumeClaim, volumeOutput string, claimOutput *v1.PersistentVolumeClaim, LwWhite *logger.MyLogWriter) {
+func (cli *Client) RunStageKubernetes(s internaltypes.Stage, ctx context.Context, envs []internaltypes.Env, globalImage string, volume string, claim *v1.PersistentVolumeClaim, volumeOutput string, claimOutput *v1.PersistentVolumeClaim, LwWhite *logger.MyLogWriter) {
 	LwWhite.Write([]byte(fmt.Sprintf("Running Stage with the following variables: %s\n", engine.GenEnv(envs))))
-	envs = append(envs, []engine.Env{{Name: "OUTPUT", Value: "/output/output"}}...)
+	envs = append(envs, []internaltypes.Env{{Name: "OUTPUT", Value: "/output/output"}}...)
 	if s.Image != "" {
 		globalImage = s.Image
 	}

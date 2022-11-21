@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/jatalocks/opsilon/internal/config"
-	"github.com/jatalocks/opsilon/internal/engine"
+	"github.com/jatalocks/opsilon/internal/internaltypes"
 	"github.com/jatalocks/opsilon/internal/logger"
 	"gopkg.in/validator.v2"
 )
@@ -40,7 +40,7 @@ func ValidateRepo(w *config.Repo) error {
 	return nil
 }
 
-func ValidateWorkflows(w *[]engine.Workflow) error {
+func ValidateWorkflows(w *[]internaltypes.Workflow) error {
 	validator.SetValidationFunc("nowhitespace", noWhiteSpace)
 	if errs := validator.Validate(&w); errs != nil {
 		logger.Operation("Your Workflows have Problems:")

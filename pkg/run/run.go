@@ -8,8 +8,8 @@ import (
 	"github.com/fatih/color"
 	"github.com/jatalocks/opsilon/internal/concurrency"
 	"github.com/jatalocks/opsilon/internal/config"
-	"github.com/jatalocks/opsilon/internal/engine"
 	"github.com/jatalocks/opsilon/internal/get"
+	"github.com/jatalocks/opsilon/internal/internaltypes"
 	"github.com/jatalocks/opsilon/internal/logger"
 	"github.com/jatalocks/opsilon/internal/utils"
 	"github.com/manifoldco/promptui"
@@ -36,7 +36,7 @@ func Select(repoName string, workflowName string, args map[string]string, confir
 	workflows, err := get.GetWorkflowsForRepo([]string{chosenRepo})
 	logger.HandleErr(err)
 	wFound := false
-	chosenAct := engine.Workflow{}
+	chosenAct := internaltypes.Workflow{}
 	if workflowName != "" {
 		for _, v := range workflows {
 			if v.ID == workflowName {
@@ -87,7 +87,7 @@ func Select(repoName string, workflowName string, args map[string]string, confir
 	}
 }
 
-func inputArgsIntoWorklow(m map[string]string, act *engine.Workflow) {
+func inputArgsIntoWorklow(m map[string]string, act *internaltypes.Workflow) {
 	argsWithValues := act.Input
 	for i, input := range argsWithValues {
 		if val, ok := m[input.Name]; ok {
@@ -101,7 +101,7 @@ func inputArgsIntoWorklow(m map[string]string, act *engine.Workflow) {
 	}
 }
 
-func PromptArguments(act *engine.Workflow) {
+func PromptArguments(act *internaltypes.Workflow) {
 	argsWithValues := act.Input
 	// Each template displays the data received from the prompt with some formatting.
 	templates := &promptui.PromptTemplates{
