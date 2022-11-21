@@ -2,6 +2,7 @@ package concurrency
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
@@ -15,6 +16,7 @@ import (
 	"github.com/jatalocks/opsilon/internal/kubengine"
 	"github.com/jatalocks/opsilon/internal/logger"
 	"github.com/kendru/darwin/go/depgraph"
+	"github.com/labstack/echo/v4"
 	"github.com/spf13/viper"
 	v1 "k8s.io/api/core/v1"
 )
@@ -41,7 +43,7 @@ func runStageGroupKubernetes(cli *kubengine.Client, wg *sync.WaitGroup, stageIDs
 	}
 }
 
-func ToGraph(w internaltypes.Workflow) {
+func ToGraph(w internaltypes.Workflow, c echo.Context) {
 	skippedStages := make([]string, 0)
 	ctx := context.Background()
 	k8s := viper.GetBool("kubernetes")
@@ -78,6 +80,9 @@ func ToGraph(w internaltypes.Workflow) {
 								logger.Error("Stage", str.Stage.ID, "Failed")
 							}
 						}
+						if c != nil {
+							streamResultToEchoContext(c, str)
+						}
 						resultsArray = append(resultsArray, str)
 					}
 				}()
@@ -110,6 +115,9 @@ func ToGraph(w internaltypes.Workflow) {
 								logger.Error("Stage", str.Stage.ID, "Failed")
 							}
 						}
+						if c != nil {
+							streamResultToEchoContext(c, str)
+						}
 						resultsArray = append(resultsArray, str)
 					}
 				}()
@@ -121,4 +129,14 @@ func ToGraph(w internaltypes.Workflow) {
 
 	}
 	config.PrintStageResults(resultsArray)
+}
+
+func streamResultToEchoContext(c echo.Context, result internaltypes.Result) error {
+	enc := json.NewEncoder(c.Response())
+	if err := enc.Encode(result); err != nil {
+		return err
+	}
+	c.Response().Flush()
+	// time.Sleep(1 * time.Second)
+	return nil
 }

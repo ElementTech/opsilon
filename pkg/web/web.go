@@ -90,6 +90,11 @@ func wrun(c echo.Context) error {
 	if len(missing) > 0 {
 		return c.String(http.StatusBadRequest, fmt.Sprint("You have a problem in the following fields:", missing))
 	}
-	concurrency.ToGraph(chosenAct)
-	return c.JSON(http.StatusCreated, u)
+
+	c.Response().Header().Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+	c.Response().WriteHeader(http.StatusOK)
+
+	concurrency.ToGraph(chosenAct, c)
+
+	return nil
 }

@@ -93,7 +93,7 @@ func Select(repoName string, workflowName string, args map[string]string, confir
 		confirm, _ = utils.Confirm(chosenAct)
 	}
 	if confirm {
-		concurrency.ToGraph(chosenAct)
+		concurrency.ToGraph(chosenAct, nil)
 	} else {
 		fmt.Println("Run Canceled")
 	}
