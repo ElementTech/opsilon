@@ -41,3 +41,10 @@ type Workflow struct {
 	Stages      []Stage `mapstructure:"stages" validate:"nonzero"`
 	Repo        string  `mapstructure:"repository,omitempty"` // To be filled automatically. Not part of YAML.
 }
+
+type WorkflowArgument struct {
+	Repo     string            `json:"repo" xml:"repo" form:"repo" query:"repo" mapstructure:"repo" validate:"nonzero"`
+	Workflow string            `json:"workflow" xml:"workflow" form:"workflow" query:"workflow" mapstructure:"workflow" validate:"nonzero"`
+	Args     map[string]string `json:"args" xml:"args" form:"args" query:"args" mapstructure:"args" validate:"nonzero"`
+	Confirm  bool
+}

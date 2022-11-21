@@ -8,6 +8,7 @@ import (
 
 	"github.com/jatalocks/opsilon/internal/config"
 	"github.com/jatalocks/opsilon/internal/get"
+	"github.com/jatalocks/opsilon/internal/internaltypes"
 	"github.com/jatalocks/opsilon/pkg/repo"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
@@ -26,6 +27,7 @@ func App(port int64) {
 	e.GET("/repo/list", rlist)
 	e.POST("/repo/add", radd)
 	e.DELETE("/repo/delete/:repo", rdelete)
+	e.POST("/run", wrun)
 	// Start server
 	e.Logger.Fatal(e.Start(":" + fmt.Sprint(port)))
 }
@@ -75,4 +77,12 @@ func rdelete(c echo.Context) error {
 		return c.String(http.StatusBadRequest, err.Error())
 	}
 	return c.String(http.StatusOK, repository)
+}
+
+func wrun(c echo.Context) error {
+	u := new(internaltypes.WorkflowArgument)
+	if err := c.Bind(u); err != nil {
+		return c.String(http.StatusBadRequest, err.Error())
+	}
+	return c.JSON(http.StatusCreated, u)
 }

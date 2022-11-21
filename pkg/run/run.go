@@ -1,6 +1,7 @@
 package run
 
 import (
+	"errors"
 	"fmt"
 	"html/template"
 	"os"
@@ -16,10 +17,41 @@ import (
 	"golang.org/x/exp/slices"
 )
 
-func Select(repoName string, workflowName string, args map[string]string, confirm bool) {
+func ValidateWorkflowArgs(repoName string, workflowName string, args map[string]string) ([]string, internaltypes.Workflow) {
+	missing := []string{}
+	wArgs := internaltypes.WorkflowArgument{Repo: repoName, Workflow: workflowName, Args: args}
 	repoList := config.GetRepoList()
+	if !slices.Contains(repoList, wArgs.Repo) {
+		logger.Error(fmt.Sprint("Repo ", repoName, "is not in repository list - To view all, run opsilon repo list."))
+		missing = append(missing, "repo")
+	}
+	workflows, err := get.GetWorkflowsForRepo([]string{repoName})
+	logger.HandleErr(err)
+	wFound := false
+	chosenAct := internaltypes.Workflow{}
+	for _, v := range workflows {
+		if v.ID == workflowName {
+			wFound = true
+			chosenAct = v
+		}
+	}
+	if !wFound {
+		logger.Error(fmt.Sprint("Worklow ", workflowName, "not found in repository", repoName, " - To view all, run opsilon list."))
+		missing = append(missing, "workflow")
+	}
+	err = InputArgsIntoWorklow(args, &chosenAct)
+	if err != nil {
+		missing = append(missing, "args")
+	}
+	return missing, chosenAct
+}
+
+func Select(repoName string, workflowName string, args map[string]string, confirm bool) {
+	missing, chosenAct := ValidateWorkflowArgs(repoName, workflowName, args)
+	fmt.Println("Missing", missing)
 	chosenRepo := repoName
-	if repoName == "" {
+	if slices.Contains(missing, "repo") {
+		repoList := config.GetRepoList()
 		promptRepo := &promptui.Select{
 			Label: "Select Repo",
 			Items: repoList,
@@ -27,28 +59,12 @@ func Select(repoName string, workflowName string, args map[string]string, confir
 		iR, _, err := promptRepo.Run()
 		logger.HandleErr(err)
 		chosenRepo = repoList[iR]
-	} else {
-		if !slices.Contains(repoList, chosenRepo) {
-			logger.Error(fmt.Sprint("Repo ", chosenRepo, "is not in repository list - To view all, run opsilon repo list."))
-			os.Exit(1)
-		}
 	}
-	workflows, err := get.GetWorkflowsForRepo([]string{chosenRepo})
-	logger.HandleErr(err)
-	wFound := false
-	chosenAct := internaltypes.Workflow{}
-	if workflowName != "" {
-		for _, v := range workflows {
-			if v.ID == workflowName {
-				wFound = true
-				chosenAct = v
-			}
-		}
-		if !wFound {
-			logger.Error(fmt.Sprint("Worklow ", workflowName, "not found in repository", chosenRepo, " - To view all, run opsilon list."))
-			os.Exit(1)
-		}
-	} else {
+	if slices.Contains(missing, "workflow") {
+		workflows, err := get.GetWorkflowsForRepo([]string{chosenRepo})
+		logger.HandleErr(err)
+		chosenAct = internaltypes.Workflow{}
+
 		templates := &promptui.SelectTemplates{
 			Label:    "{{ . }}",
 			Active:   "\u25B6\uFE0F {{ .ID | cyan }} ({{ .Description | green }})",
@@ -70,24 +86,20 @@ func Select(repoName string, workflowName string, args map[string]string, confir
 
 	cyan := color.New(color.FgCyan).SprintFunc()
 	fmt.Printf("You Chose: %s\n", cyan(chosenAct.ID))
-	if len(args) == 0 {
+	if slices.Contains(missing, "args") || slices.Contains(missing, "workflow") || slices.Contains(missing, "repo") {
 		PromptArguments(&chosenAct)
-	} else {
-		inputArgsIntoWorklow(args, &chosenAct)
 	}
-	toRun := confirm
-	if !toRun {
-		toRun, err = utils.Confirm(chosenAct)
-		logger.HandleErr(err)
+	if !confirm {
+		confirm, _ = utils.Confirm(chosenAct)
 	}
-	if toRun {
+	if confirm {
 		concurrency.ToGraph(chosenAct)
 	} else {
 		fmt.Println("Run Canceled")
 	}
 }
 
-func inputArgsIntoWorklow(m map[string]string, act *internaltypes.Workflow) {
+func InputArgsIntoWorklow(m map[string]string, act *internaltypes.Workflow) error {
 	argsWithValues := act.Input
 	for i, input := range argsWithValues {
 		if val, ok := m[input.Name]; ok {
@@ -95,10 +107,11 @@ func inputArgsIntoWorklow(m map[string]string, act *internaltypes.Workflow) {
 		} else {
 			if !input.Optional {
 				logger.Error("Input", input.Name, "is mandatory but none was provided.")
-				os.Exit(1)
+				return errors.New("is mandatory but none was provided.")
 			}
 		}
 	}
+	return nil
 }
 
 func PromptArguments(act *internaltypes.Workflow) {

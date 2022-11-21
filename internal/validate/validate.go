@@ -48,3 +48,12 @@ func ValidateWorkflows(w *[]internaltypes.Workflow) error {
 	}
 	return nil
 }
+
+func ValidateWorkflowsArgs(w []internaltypes.WorkflowArgument) error {
+	validator.SetValidationFunc("nowhitespace", noWhiteSpace)
+	if errs := validator.Validate(&w); errs != nil {
+		logger.Operation("Your Workflows Arguments have Problems:")
+		return errs
+	}
+	return nil
+}
