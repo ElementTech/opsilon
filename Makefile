@@ -44,6 +44,10 @@ PHONY: lint
 lint: ## lint go files
 	golangci-lint run -c .golang-ci.yml
 
+# PHONY: swag
+# swag: ## generate swagger docs
+# 	swag init
+
 .PHONY: docker-build
 docker-build: ## dockerize golang application
 	@docker build --tag $(projectname) .

@@ -14,6 +14,7 @@ import (
 	"github.com/jatalocks/opsilon/pkg/run"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
+	"github.com/pangpanglabs/echoswagger/v2"
 )
 
 var ver string
@@ -21,24 +22,36 @@ var ver string
 func App(port int64, v string) {
 	ver = v
 	// Echo instance
-	e := echo.New()
+	e := echoswagger.New(echo.New(), "/api/v1/docs", nil)
 
 	// Middleware
-	e.Use(middleware.Logger())
-	e.Use(middleware.Recover())
-
+	e.Echo().Use(middleware.Logger())
+	e.Echo().Use(middleware.Recover())
 	// Routes
-	e.GET("/api/v1/version", version)
-	e.GET("/api/v1/list", list)
-	e.GET("/api/v1/repo/list", rlist)
-	e.POST("/api/v1/repo/add", radd)
-	e.DELETE("/api/v1/repo/delete/:repo", rdelete)
-	e.POST("/api/v1/run", wrun)
+	e.GET("/api/v1/version", version).
+		AddResponse(http.StatusOK, "the opsilon binary version", nil, nil)
+	e.GET("/api/v1/list", list).
+		AddResponse(http.StatusOK, "list of available workflows", nil, nil).
+		AddParamQuery("", "repos", "comma seperated list of repositories", false)
+
+	rg := e.Group("repo", "/api/v1/repo")
+	rg.GET("/list", rlist).
+		AddResponse(http.StatusOK, "list of added repositories", nil, nil)
+	rg.POST("/add", radd).
+		AddResponse(http.StatusCreated, "add a repository", nil, nil).
+		AddParamBody(config.Repo{}, "repo", "repository to add", true)
+	rg.DELETE("/delete/:repo", rdelete).
+		AddResponse(http.StatusOK, "delete a repository", nil, nil).
+		AddParamPath("", "repo", "repository to delete")
+
+	e.POST("/api/v1/run", wrun).
+		AddResponse(http.StatusOK, "run a workflow", nil, nil).
+		AddParamBody(internaltypes.WorkflowArgument{}, "workflow", "workflow to run", true)
+	// e.GET("/api/v1/swagger/*", echoSwagger.WrapHandler)
 	// Start server
-	e.Logger.Fatal(e.Start(":" + fmt.Sprint(port)))
+	e.Echo().Logger.Fatal(e.Echo().Start(":" + fmt.Sprint(port)))
 }
 
-// Handler
 func version(c echo.Context) error {
 	return c.String(http.StatusOK, ver)
 }

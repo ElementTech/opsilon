@@ -8,13 +8,16 @@ A customizable CLI for collaboratively running container-native workflows
 For full usage, please refer to the: [Docs](/assets/doc.md).
 
 <!--ts-->
-   * [Quickstart](#quickstart)
-   * [Usage](#usage)
-   * [Demo](#demo)
-   * [Contribution](#contribute)
-     * [Development Features](###development-features)
-     * [Project Layout](###project-layout)
-     * [Makefile Targets](###makefile-targets)
+- [Opsilon](#opsilon)
+- [Download](#download)
+    - [Quickstart](#quickstart)
+  - [Usage](#usage)
+- [Demo](#demo)
+- [Contribution](#contribution)
+    - [Development Features](#development-features)
+    - [Project Layout](#project-layout)
+    - [Makefile Targets](#makefile-targets)
+    - [Thanks](#thanks)
 <!--te-->
 
 
@@ -91,6 +94,7 @@ I would always welcome an issue or a PR! Every contribution is welcome. Below is
 - [Makefile](Makefile) - with various useful targets and documentation (see Makefile Targets)
 - [Github Pages](_config.yml) using [jekyll-theme-minimal](https://github.com/pages-themes/minimal) (checkout [https://jatalocks.github.io/opsilon/](https://jatalocks.github.io/opsilon/))
 - [pre-commit-hooks](https://pre-commit.com/) for formatting and validating code before committing
+<!-- - [swagger](https://github.com/swaggo/echo-swagger) for generating swagger docs -->
 
 ### Project Layout
 * [assets/](https://pkg.go.dev/github.com/jatalocks/opsilon/assets) => docs
@@ -112,6 +116,7 @@ fmt                            format go files
 help                           list makefile targets
 install                        install golang binary
 lint                           lint go files
+# swag                           generate swagger docs
 pre-commit                     run pre-commit hooks
 run                            run the app
 test                           display test coverage
