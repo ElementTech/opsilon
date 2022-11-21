@@ -288,17 +288,17 @@ func toPodName(stage internaltypes.Stage) string {
 
 func (cli *Client) KubeEngine(wg *sync.WaitGroup, sID string, ctx context.Context, w internaltypes.Workflow, vol string, claim *v1.PersistentVolumeClaim, allOutputs map[string][]internaltypes.Env, skippedStages *[]string, results chan internaltypes.Result) {
 	defer wg.Done()
-
 	idx := slices.IndexFunc(w.Stages, func(c internaltypes.Stage) bool { return c.ID == sID })
 	stage := w.Stages[idx]
-
+	result := internaltypes.Result{Stage: stage}
 	volOutput, claimOutput := cli.CreateVolume(ctx, false)
 	defer cli.RemoveVolume(ctx, volOutput, claimOutput)
 
-	allEnvs, needSplit, LwWhite, LwCrossed := engine.PrepareStage(w.Env, stage.Env, w.Input, stage.Needs, allOutputs, stage.Stage, stage.ID)
+	allEnvs, needSplit, LwWhite, LwCrossed := engine.PrepareStage(w.Env, stage.Env, w.Input, stage.Needs, allOutputs, stage.Stage, stage.ID, &result)
 
 	if !engine.EvaluateCondition(stage.If, allEnvs, LwWhite) {
 		*skippedStages = append(*skippedStages, stage.ID)
+		result.Skipped = true
 		LwCrossed.Println("Stage Skipped due to IF condition")
 	} else {
 		toSkip := false
@@ -311,14 +311,15 @@ func (cli *Client) KubeEngine(wg *sync.WaitGroup, sID string, ctx context.Contex
 		}
 		if toSkip {
 			*skippedStages = append(*skippedStages, stage.ID)
+			result.Skipped = true
 			LwCrossed.Println("Stage Skipped due to needed stage skipped")
 		} else {
 			if stage.Clean {
 				volClean, claimClean := cli.CreateVolume(ctx, false)
-				cli.RunStageKubernetes(stage, ctx, allEnvs, w.Image, volClean, claimClean, volOutput, claimOutput, LwWhite)
+				cli.RunStageKubernetes(stage, ctx, allEnvs, w.Image, volClean, claimClean, volOutput, claimOutput, LwWhite, &result)
 				defer cli.RemoveVolume(ctx, volClean, claimClean)
 			} else {
-				cli.RunStageKubernetes(stage, ctx, allEnvs, w.Image, vol, claim, volOutput, claimOutput, LwWhite)
+				cli.RunStageKubernetes(stage, ctx, allEnvs, w.Image, vol, claim, volOutput, claimOutput, LwWhite, &result)
 			}
 		}
 
@@ -334,11 +335,13 @@ func (cli *Client) KubeEngine(wg *sync.WaitGroup, sID string, ctx context.Contex
 			outputMap, err := engine.ReadPropertiesFile(path.Join(outputPath, "output"))
 			if err == nil {
 				allOutputs[stage.ID] = outputMap
+				result.Outputs = outputMap
 			}
 		} else {
 			logger.Error(err.Error())
 		}
 	}
+	results <- result
 }
 
 func ToV1Env(envs []internaltypes.Env) *[]v1.EnvVar {
@@ -446,7 +449,7 @@ func (c *Client) getPodLogs(ctx context.Context, podName string, LwWhite *logger
 	return nil
 }
 
-func (cli *Client) RunStageKubernetes(s internaltypes.Stage, ctx context.Context, envs []internaltypes.Env, globalImage string, volume string, claim *v1.PersistentVolumeClaim, volumeOutput string, claimOutput *v1.PersistentVolumeClaim, LwWhite *logger.MyLogWriter) {
+func (cli *Client) RunStageKubernetes(s internaltypes.Stage, ctx context.Context, envs []internaltypes.Env, globalImage string, volume string, claim *v1.PersistentVolumeClaim, volumeOutput string, claimOutput *v1.PersistentVolumeClaim, LwWhite *logger.MyLogWriter, result *internaltypes.Result) bool {
 	LwWhite.Write([]byte(fmt.Sprintf("Running Stage with the following variables: %s\n", engine.GenEnv(envs))))
 	envs = append(envs, []internaltypes.Env{{Name: "OUTPUT", Value: "/output/output"}}...)
 	if s.Image != "" {
@@ -474,8 +477,6 @@ func (cli *Client) RunStageKubernetes(s internaltypes.Stage, ctx context.Context
 		}
 	}()
 
-	// exitCode, err := cli.GetPodExitCode(ctx, podName)
-	// logger.HandleErr(err)
 	err = cli.getPodLogs(ctx, podName, LwWhite)
 	logger.HandleErr(err)
 	err = cli.waitPod(ctx, podName, LwWhite, "Terminated")
@@ -491,7 +492,9 @@ func (cli *Client) RunStageKubernetes(s internaltypes.Stage, ctx context.Context
 		logger.HandleErr(err)
 		engine.ExtractArtifacts(path.Join(dirArt, "app"), s)
 	}
-
+	exitCode, err := cli.GetPodExitCode(ctx, podName)
+	logger.HandleErr(err)
+	return exitCode == 0
 	// logger.Info(fmt.Sprint(exitCode))
 }
 func getPrefix(file string) string {

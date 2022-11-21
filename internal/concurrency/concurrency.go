@@ -9,6 +9,7 @@ import (
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
+	"github.com/jatalocks/opsilon/internal/config"
 	"github.com/jatalocks/opsilon/internal/engine"
 	"github.com/jatalocks/opsilon/internal/internaltypes"
 	"github.com/jatalocks/opsilon/internal/kubengine"
@@ -44,7 +45,8 @@ func ToGraph(w internaltypes.Workflow) {
 	skippedStages := make([]string, 0)
 	ctx := context.Background()
 	k8s := viper.GetBool("kubernetes")
-	results := make(chan internaltypes.Result, len(w.Stages))
+	results := make(chan internaltypes.Result)
+	resultsArray := []internaltypes.Result{}
 	if !k8s {
 		cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 		logger.HandleErr(err)
@@ -65,6 +67,11 @@ func ToGraph(w internaltypes.Workflow) {
 			if (len(layer) > 0) && (layer[0] != "") {
 				fmt.Printf("Running in Parallel: %s\n", strings.Join(layer, ", "))
 				wg.Add(len(layer))
+				go func() {
+					for str := range results {
+						resultsArray = append(resultsArray, str)
+					}
+				}()
 				go runStageGroupDocker(wg, layer, cli, ctx, w, vol, dir, allOutputs, &skippedStages, results)
 				wg.Wait()
 			}
@@ -83,6 +90,11 @@ func ToGraph(w internaltypes.Workflow) {
 			if (len(layer) > 0) && (layer[0] != "") {
 				fmt.Printf("Running in Parallel: %s\n", strings.Join(layer, ", "))
 				wg.Add(len(layer))
+				go func() {
+					for str := range results {
+						resultsArray = append(resultsArray, str)
+					}
+				}()
 				go runStageGroupKubernetes(cli, wg, layer, ctx, w, vol, claim, allOutputs, &skippedStages, results)
 				wg.Wait()
 			}
@@ -90,4 +102,5 @@ func ToGraph(w internaltypes.Workflow) {
 		cli.RemoveVolume(ctx, vol, claim)
 
 	}
+	config.PrintStageResults(resultsArray)
 }

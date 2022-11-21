@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/jatalocks/opsilon/internal/engine"
 	"github.com/jatalocks/opsilon/internal/internaltypes"
 	"github.com/jatalocks/opsilon/internal/logger"
 	"github.com/olekukonko/tablewriter"
@@ -43,6 +44,32 @@ func PrintRepos(repos []Repo) {
 
 	table := tablewriter.NewWriter(os.Stdout)
 	table.SetHeader([]string{"Name", "Description", "Path/URL", "Type", "Branch", "Subfolder"})
+
+	for _, v := range data {
+		table.Append(v)
+	}
+	table.Render() // Send output
+}
+
+func countRune(s string, r rune) int {
+	count := 0
+	for _, c := range s {
+		if c == r {
+			count++
+		}
+	}
+	return count
+}
+func PrintStageResults(results []internaltypes.Result) {
+	var data [][]string
+
+	for _, r := range results {
+		row := []string{r.Stage.Stage, r.Stage.ID, fmt.Sprint(r.Result), fmt.Sprint(r.Skipped), fmt.Sprint(engine.GenEnv(r.Outputs)), fmt.Sprint(len(r.Logs))}
+		data = append(data, row)
+	}
+
+	table := tablewriter.NewWriter(os.Stdout)
+	table.SetHeader([]string{"Stage", "ID", "Result", "Skipped", "Outputs", "Log Lines"})
 
 	for _, v := range data {
 		table.Append(v)

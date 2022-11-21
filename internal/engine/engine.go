@@ -97,7 +97,7 @@ func RemoveVolume(name string, ctx context.Context, cli *client.Client) (removed
 	return true, nil
 }
 
-func RunStage(s internaltypes.Stage, ctx context.Context, cli *client.Client, envs []internaltypes.Env, globalImage string, volume types.Volume, dir string, volumeOutput types.Volume, dirOutput string, LwWhite *logger.MyLogWriter) {
+func RunStage(s internaltypes.Stage, ctx context.Context, cli *client.Client, envs []internaltypes.Env, globalImage string, volume types.Volume, dir string, volumeOutput types.Volume, dirOutput string, LwWhite *logger.MyLogWriter) bool {
 	PullImage(s.Image, ctx, cli)
 	if s.Image != "" {
 		globalImage = s.Image
@@ -142,16 +142,21 @@ func RunStage(s internaltypes.Stage, ctx context.Context, cli *client.Client, en
 	}
 
 	statusCh, errCh := cli.ContainerWait(ctx, resp.ID, container.WaitConditionNotRunning)
-	select {
-	case err := <-errCh:
-		logger.HandleErr(err)
-	case <-statusCh:
-	}
-
 	out, err := cli.ContainerLogs(ctx, resp.ID, types.ContainerLogsOptions{ShowStdout: true})
 	logger.HandleErr(err)
 
 	stdcopy.StdCopy(LwWhite, LwWhite, out)
+	select {
+	case err := <-errCh:
+		logger.HandleErr(err)
+	case <-statusCh:
+		status, err := cli.ContainerInspect(ctx, resp.ID)
+		logger.HandleErr(err)
+
+		return status.State.ExitCode == 0
+	}
+
+	return false
 }
 
 func PullImage(image string, ctx context.Context, cli *client.Client) {
@@ -200,7 +205,7 @@ func ReadPropertiesFile(filename string) ([]internaltypes.Env, error) {
 	return config, nil
 }
 
-func PrepareStage(wEnv []internaltypes.Env, sEnv []internaltypes.Env, inputs []internaltypes.Input, needs string, allOutputs map[string][]internaltypes.Env, stage string, id string) ([]internaltypes.Env, []string, *logger.MyLogWriter, *log.Logger) {
+func PrepareStage(wEnv []internaltypes.Env, sEnv []internaltypes.Env, inputs []internaltypes.Input, needs string, allOutputs map[string][]internaltypes.Env, stage string, id string, result *internaltypes.Result) ([]internaltypes.Env, []string, *logger.MyLogWriter, *log.Logger) {
 	allEnvs := append(wEnv, sEnv...)
 	allEnvs = append(allEnvs, GenEnvFromArgs(inputs)...)
 	needSplit := strings.Split(needs, ",")
@@ -213,12 +218,14 @@ func PrepareStage(wEnv []internaltypes.Env, sEnv []internaltypes.Env, inputs []i
 	}
 	LwWhite := logger.NewLogWriter(func(str string, color color.Attribute) {
 		logger.Custom(color, fmt.Sprintf("[%s:%s] %s", stage, id, str))
+		result.Logs = append(result.Logs, fmt.Sprintf("[%s:%s] %s", stage, id, str))
 	}, color.FgWhite)
 
 	LwCrossed := log.New(logger.NewLogWriter(func(str string, col color.Attribute) {
 		colFuc := color.New(col).SprintFunc()
 		white := color.New(color.CrossedOut).SprintFunc()
 		logger.Free(white(fmt.Sprintf("[%s:%s] ", stage, id), colFuc(str)))
+		result.Logs = append(result.Logs, fmt.Sprintf("[%s:%s] %s", stage, id, str))
 	}, color.BgYellow), "", 0)
 
 	return allEnvs, needSplit, LwWhite, LwCrossed
@@ -237,8 +244,7 @@ func Engine(cli *client.Client, ctx context.Context, w internaltypes.Workflow, s
 	defer RemoveVolume(volOutput.Name, ctx, cli)
 	defer os.RemoveAll(dirOutput)
 
-	allEnvs, needSplit, LwWhite, LwCrossed := PrepareStage(w.Env, stage.Env, w.Input, stage.Needs, allOutputs, stage.Stage, stage.ID)
-
+	allEnvs, needSplit, LwWhite, LwCrossed := PrepareStage(w.Env, stage.Env, w.Input, stage.Needs, allOutputs, stage.Stage, stage.ID, &result)
 	if !EvaluateCondition(stage.If, allEnvs, LwWhite) {
 		*skippedStages = append(*skippedStages, stage.ID)
 		result.Skipped = true
@@ -259,9 +265,11 @@ func Engine(cli *client.Client, ctx context.Context, w internaltypes.Workflow, s
 		} else {
 			if stage.Clean {
 				volClean, dirClean := CreateVolume(cli, ctx, false)
-				RunStage(stage, ctx, cli, allEnvs, w.Image, volClean, dirClean, volOutput, dirOutput, LwWhite)
+				success := RunStage(stage, ctx, cli, allEnvs, w.Image, volClean, dirClean, volOutput, dirOutput, LwWhite)
+				result.Result = success
 			} else {
-				RunStage(stage, ctx, cli, allEnvs, w.Image, vol, dir, volOutput, dirOutput, LwWhite)
+				success := RunStage(stage, ctx, cli, allEnvs, w.Image, vol, dir, volOutput, dirOutput, LwWhite)
+				result.Result = success
 			}
 		}
 
@@ -270,6 +278,8 @@ func Engine(cli *client.Client, ctx context.Context, w internaltypes.Workflow, s
 	outputMap, err := ReadPropertiesFile(outputPath)
 	logger.HandleErr(err)
 	allOutputs[stage.ID] = outputMap
+	result.Outputs = outputMap
+	results <- result
 }
 
 func CreateVolume(cli *client.Client, ctx context.Context, mount bool) (vol types.Volume, dir string) {
@@ -322,6 +332,7 @@ func EvaluateCondition(condition string, availableValues []internaltypes.Env, Lw
 		for _, v := range varList {
 			idx := slices.IndexFunc(availableValues, func(c internaltypes.Env) bool { return c.Name == v })
 			if idx == -1 {
+
 				// Not all variables can be populated. Thus the If statement is void.
 				return false
 			} else {
