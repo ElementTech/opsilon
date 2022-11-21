@@ -69,6 +69,15 @@ func ToGraph(w internaltypes.Workflow) {
 				wg.Add(len(layer))
 				go func() {
 					for str := range results {
+						if str.Result {
+							logger.Success("Stage", str.Stage.ID, "Success")
+						} else {
+							if str.Skipped {
+								logger.Operation("Stage", str.Stage.ID, "Skipped")
+							} else {
+								logger.Error("Stage", str.Stage.ID, "Failed")
+							}
+						}
 						resultsArray = append(resultsArray, str)
 					}
 				}()
@@ -92,6 +101,15 @@ func ToGraph(w internaltypes.Workflow) {
 				wg.Add(len(layer))
 				go func() {
 					for str := range results {
+						if str.Result {
+							logger.Success("Stage", str.Stage.ID, "Success")
+						} else {
+							if str.Skipped {
+								logger.Operation("Stage", str.Stage.ID, "Skipped")
+							} else {
+								logger.Error("Stage", str.Stage.ID, "Failed")
+							}
+						}
 						resultsArray = append(resultsArray, str)
 					}
 				}()
