@@ -16,7 +16,10 @@ import (
 	"github.com/labstack/echo/v4/middleware"
 )
 
-func App(port int64) {
+var ver string
+
+func App(port int64, v string) {
+	ver = v
 	// Echo instance
 	e := echo.New()
 
@@ -25,13 +28,19 @@ func App(port int64) {
 	e.Use(middleware.Recover())
 
 	// Routes
-	e.GET("/list", list)
-	e.GET("/repo/list", rlist)
-	e.POST("/repo/add", radd)
-	e.DELETE("/repo/delete/:repo", rdelete)
-	e.POST("/run", wrun)
+	e.GET("/api/v1/version", version)
+	e.GET("/api/v1/list", list)
+	e.GET("/api/v1/repo/list", rlist)
+	e.POST("/api/v1/repo/add", radd)
+	e.DELETE("/api/v1/repo/delete/:repo", rdelete)
+	e.POST("/api/v1/run", wrun)
 	// Start server
 	e.Logger.Fatal(e.Start(":" + fmt.Sprint(port)))
+}
+
+// Handler
+func version(c echo.Context) error {
+	return c.String(http.StatusOK, ver)
 }
 
 // Handler
