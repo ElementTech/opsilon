@@ -43,9 +43,6 @@ jobs:
           # list of Docker images to use as base name for tags
           images: |
             jatalocks333/opsilon
-          # generate Docker tags based on the following events/attributes
-          tags: |
-            type=semver,pattern={{major}}.{{minor}}.{{minor}}
 
       - name: Build and push
         uses: docker/build-push-action@v2
