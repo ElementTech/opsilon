@@ -295,4 +295,4 @@ rbac:
     #   verbs: ["get", "list", "watch"]
 
   ## Make this into a clusterwide role to give access to all namespaces if desired, disabled by default for more security
-  clusterWideAccess: false
+  clusterWideAccess: true
