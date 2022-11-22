@@ -1,0 +1,31 @@
+{{- if .Values.securityGroupIDs }}
+################################################
+# Standardized Templates - AWS Security Group
+# Author/Maintainer: Farley <farley@neonsurge.com>
+################################################
+apiVersion: vpcresources.k8s.aws/v1beta1
+kind: SecurityGroupPolicy
+metadata:
+  name: {{ template "name" . }}
+spec:
+  podSelector:
+    matchLabels:
+{{- if .Values.usingNewRecommendedLabels }}
+{{- if .Values.labelsEnableDefault }}
+      app.kubernetes.io/name: {{ template "name" . }}
+{{- end }}
+{{- else }}
+{{- if .Values.labelsEnableDefault }}
+      app: {{ template "name" . }}
+{{- end }}
+{{- end }}
+
+{{- if .Values.labels }}
+{{ toYaml .Values.labels | indent 6 }}
+{{- end }}
+  securityGroups:
+    groupIds:
+      {{- with .Values.securityGroupIDs }}
+        {{- toYaml . | nindent 6 }}
+      {{- end }}
+{{- end }}
