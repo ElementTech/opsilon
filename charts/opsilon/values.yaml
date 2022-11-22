@@ -165,7 +165,7 @@ readinessProbe:
   probeType: httpGet
 
   # parameters for probes
-  path: /ready
+  path: /api/v1/docs
   port: opsilon-api
   command:
     - ls -la /
