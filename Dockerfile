@@ -10,6 +10,6 @@ RUN go mod download
 
 COPY . .
 
-RUN go build -ldflags "-s -w -X main.version=1.0.0" -o opsilon
+RUN go build -ldflags "-X main.version=$(git describe --abbrev=0 --tags)" -o opsilon
 
 CMD [ "./opsilon" ]
