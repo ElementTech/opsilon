@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/jatalocks/opsilon/internal/engine"
+	"github.com/jatalocks/opsilon/internal/internaltypes"
 	"github.com/jatalocks/opsilon/internal/logger"
 	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/viper"
@@ -15,16 +16,16 @@ import (
 )
 
 type Location struct {
-	Path      string `mapstructure:"path" validate:"nonzero"`
-	Type      string `mapstructure:"type" validate:"nonzero"`
-	Subfolder string `mapstructure:"subfolder,omitempty"`
-	Branch    string `mapstructure:"branch,omitempty"`
+	Path      string `json:"path" xml:"path" form:"path" query:"path" mapstructure:"path" validate:"nonzero"`
+	Type      string `json:"type" xml:"type" form:"type" query:"type" mapstructure:"type" validate:"nonzero"`
+	Subfolder string `json:"subfolder" xml:"subfolder" form:"subfolder" query:"subfolder" mapstructure:"subfolder,omitempty"`
+	Branch    string `json:"branch" xml:"branch" form:"branch" query:"branch" mapstructure:"branch,omitempty"`
 }
 
 type Repo struct {
-	Name        string   `mapstructure:"name" validate:"nonzero"`
-	Description string   `mapstructure:"description"`
-	Location    Location `mapstructure:"location" validate:"nonzero"`
+	Name        string   `json:"name" xml:"name" form:"name" query:"name" mapstructure:"name" validate:"nonzero"`
+	Description string   `json:"description" xml:"description" form:"description" query:"description" mapstructure:"description"`
+	Location    Location `json:"location" xml:"location" form:"location" query:"location" mapstructure:"location" validate:"nonzero"`
 }
 
 type RepoFile struct {
@@ -50,6 +51,32 @@ func PrintRepos(repos []Repo) {
 	table.Render() // Send output
 }
 
+func countRune(s string, r rune) int {
+	count := 0
+	for _, c := range s {
+		if c == r {
+			count++
+		}
+	}
+	return count
+}
+func PrintStageResults(results []internaltypes.Result) {
+	var data [][]string
+
+	for _, r := range results {
+		row := []string{r.Stage.Stage, r.Stage.ID, fmt.Sprint(r.Result), fmt.Sprint(r.Skipped), fmt.Sprint(engine.GenEnv(r.Outputs)), fmt.Sprint(len(r.Logs))}
+		data = append(data, row)
+	}
+
+	table := tablewriter.NewWriter(os.Stdout)
+	table.SetHeader([]string{"Stage", "ID", "Result", "Skipped", "Outputs", "Log Lines"})
+
+	for _, v := range data {
+		table.Append(v)
+	}
+	table.Render() // Send output
+}
+
 func TrimSuffix(s, suffix string) string {
 	if strings.HasSuffix(s, suffix) {
 		s = s[:len(s)-len(suffix)]
@@ -66,7 +93,7 @@ func StringInSlice(a string, list []string) bool {
 	return false
 }
 
-func PrintWorkflows(workflows []engine.Workflow) {
+func PrintWorkflows(workflows []internaltypes.Workflow) {
 	var data [][]string
 
 	for _, r := range workflows {

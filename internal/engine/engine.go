@@ -22,46 +22,13 @@ import (
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/stdcopy"
 	"github.com/fatih/color"
+	"github.com/jatalocks/opsilon/internal/internaltypes"
 	"github.com/jatalocks/opsilon/internal/logger"
 	cp "github.com/otiai10/copy"
 	"golang.org/x/exp/slices"
 )
 
-type Input struct {
-	Name     string `mapstructure:"name" validate:"nonzero,nowhitespace"`
-	Default  string `mapstructure:"default"`
-	Optional bool   `mapstructure:"optional,omitempty"`
-}
-
-type Stage struct {
-	Stage     string   `mapstructure:"stage" validate:"nonzero"`
-	ID        string   `mapstructure:"id,omitempty" validate:"nonzero,nowhitespace"`
-	Script    []string `mapstructure:"script" validate:"nonzero"`
-	If        string   `mapstructure:"if,omitempty"`
-	Clean     bool     `mapstructure:"clean,omitempty"`
-	Env       []Env    `mapstructure:"env,omitempty"`
-	Artifacts []string `mapstructure:"artifacts,omitempty"`
-	Image     string   `mapstructure:"image,omitempty"`
-	Needs     string   `mapstructure:"needs,omitempty" validate:"nowhitespace"`
-}
-
-type Env struct {
-	Name  string `mapstructure:"name" validate:"nonzero,nowhitespace"`
-	Value string `mapstructure:"value" validate:"nonzero"`
-}
-
-type Workflow struct {
-	ID          string  `mapstructure:"id" validate:"nonzero,nowhitespace"`
-	Image       string  `mapstructure:"image" validate:"nonzero,nowhitespace"`
-	Description string  `mapstructure:"description"`
-	Env         []Env   `mapstructure:"env"`
-	Input       []Input `mapstructure:"input"`
-	Mount       bool    `mapstructure:"mount"`
-	Stages      []Stage `mapstructure:"stages" validate:"nonzero"`
-	Repo        string  `mapstructure:"repository,omitempty"` // To be filled automatically. Not part of YAML.
-}
-
-func GenEnv(e []Env) []string {
+func GenEnv(e []internaltypes.Env) []string {
 	envs := make([]string, len(e))
 	for i, v := range e {
 		envs[i] = fmt.Sprintf("%s=%s", v.Name, v.Value)
@@ -69,8 +36,8 @@ func GenEnv(e []Env) []string {
 	return envs
 }
 
-func GenEnvFromArgs(e []Input) []Env {
-	envs := make([]Env, len(e))
+func GenEnvFromArgs(e []internaltypes.Input) []internaltypes.Env {
+	envs := make([]internaltypes.Env, len(e))
 	for i, v := range e {
 		envs[i].Name = v.Name
 		envs[i].Value = v.Default
@@ -130,7 +97,7 @@ func RemoveVolume(name string, ctx context.Context, cli *client.Client) (removed
 	return true, nil
 }
 
-func RunStage(s Stage, ctx context.Context, cli *client.Client, envs []Env, globalImage string, volume types.Volume, dir string, volumeOutput types.Volume, dirOutput string, LwWhite *logger.MyLogWriter) {
+func RunStage(s internaltypes.Stage, ctx context.Context, cli *client.Client, envs []internaltypes.Env, globalImage string, volume types.Volume, dir string, volumeOutput types.Volume, dirOutput string, LwWhite *logger.MyLogWriter) bool {
 	PullImage(s.Image, ctx, cli)
 	if s.Image != "" {
 		globalImage = s.Image
@@ -175,16 +142,21 @@ func RunStage(s Stage, ctx context.Context, cli *client.Client, envs []Env, glob
 	}
 
 	statusCh, errCh := cli.ContainerWait(ctx, resp.ID, container.WaitConditionNotRunning)
-	select {
-	case err := <-errCh:
-		logger.HandleErr(err)
-	case <-statusCh:
-	}
-
 	out, err := cli.ContainerLogs(ctx, resp.ID, types.ContainerLogsOptions{ShowStdout: true})
 	logger.HandleErr(err)
 
 	stdcopy.StdCopy(LwWhite, LwWhite, out)
+	select {
+	case err := <-errCh:
+		logger.HandleErr(err)
+	case <-statusCh:
+		status, err := cli.ContainerInspect(ctx, resp.ID)
+		logger.HandleErr(err)
+
+		return status.State.ExitCode == 0
+	}
+
+	return false
 }
 
 func PullImage(image string, ctx context.Context, cli *client.Client) {
@@ -200,8 +172,8 @@ func PullImage(image string, ctx context.Context, cli *client.Client) {
 	}
 }
 
-func ReadPropertiesFile(filename string) ([]Env, error) {
-	config := []Env{}
+func ReadPropertiesFile(filename string) ([]internaltypes.Env, error) {
+	config := []internaltypes.Env{}
 
 	if len(filename) == 0 {
 		return config, nil
@@ -221,7 +193,7 @@ func ReadPropertiesFile(filename string) ([]Env, error) {
 				if len(line) > equal {
 					value = strings.TrimSpace(line[equal+1:])
 				}
-				config = append(config, Env{Name: key, Value: value})
+				config = append(config, internaltypes.Env{Name: key, Value: value})
 			}
 		}
 	}
@@ -233,7 +205,7 @@ func ReadPropertiesFile(filename string) ([]Env, error) {
 	return config, nil
 }
 
-func PrepareStage(wEnv []Env, sEnv []Env, inputs []Input, needs string, allOutputs map[string][]Env, stage string, id string) ([]Env, []string, *logger.MyLogWriter, *log.Logger) {
+func PrepareStage(wEnv []internaltypes.Env, sEnv []internaltypes.Env, inputs []internaltypes.Input, needs string, allOutputs map[string][]internaltypes.Env, stage string, id string, result *internaltypes.Result) ([]internaltypes.Env, []string, *logger.MyLogWriter, *log.Logger) {
 	allEnvs := append(wEnv, sEnv...)
 	allEnvs = append(allEnvs, GenEnvFromArgs(inputs)...)
 	needSplit := strings.Split(needs, ",")
@@ -246,21 +218,24 @@ func PrepareStage(wEnv []Env, sEnv []Env, inputs []Input, needs string, allOutpu
 	}
 	LwWhite := logger.NewLogWriter(func(str string, color color.Attribute) {
 		logger.Custom(color, fmt.Sprintf("[%s:%s] %s", stage, id, str))
+		result.Logs = append(result.Logs, fmt.Sprintf("[%s:%s] %s", stage, id, str))
 	}, color.FgWhite)
 
 	LwCrossed := log.New(logger.NewLogWriter(func(str string, col color.Attribute) {
 		colFuc := color.New(col).SprintFunc()
 		white := color.New(color.CrossedOut).SprintFunc()
 		logger.Free(white(fmt.Sprintf("[%s:%s] ", stage, id), colFuc(str)))
+		result.Logs = append(result.Logs, fmt.Sprintf("[%s:%s] %s", stage, id, str))
 	}, color.BgYellow), "", 0)
 
 	return allEnvs, needSplit, LwWhite, LwCrossed
 }
 
-func Engine(cli *client.Client, ctx context.Context, w Workflow, sID string, vol types.Volume, dir string, allOutputs map[string][]Env, wg *sync.WaitGroup, skippedStages *[]string) {
+func Engine(cli *client.Client, ctx context.Context, w internaltypes.Workflow, sID string, vol types.Volume, dir string, allOutputs map[string][]internaltypes.Env, wg *sync.WaitGroup, skippedStages *[]string, results chan internaltypes.Result) {
 	defer wg.Done()
-	idx := slices.IndexFunc(w.Stages, func(c Stage) bool { return c.ID == sID })
+	idx := slices.IndexFunc(w.Stages, func(c internaltypes.Stage) bool { return c.ID == sID })
 	stage := w.Stages[idx]
+	result := internaltypes.Result{Stage: stage}
 	volOutput, dirOutput := CreateVolume(cli, ctx, false)
 	outputPath := path.Join(dirOutput, "output")
 	_, err := os.Create(outputPath)
@@ -269,10 +244,10 @@ func Engine(cli *client.Client, ctx context.Context, w Workflow, sID string, vol
 	defer RemoveVolume(volOutput.Name, ctx, cli)
 	defer os.RemoveAll(dirOutput)
 
-	allEnvs, needSplit, LwWhite, LwCrossed := PrepareStage(w.Env, stage.Env, w.Input, stage.Needs, allOutputs, stage.Stage, stage.ID)
-
+	allEnvs, needSplit, LwWhite, LwCrossed := PrepareStage(w.Env, stage.Env, w.Input, stage.Needs, allOutputs, stage.Stage, stage.ID, &result)
 	if !EvaluateCondition(stage.If, allEnvs, LwWhite) {
 		*skippedStages = append(*skippedStages, stage.ID)
+		result.Skipped = true
 		LwCrossed.Println("Stage Skipped due to IF condition")
 	} else {
 		toSkip := false
@@ -285,13 +260,16 @@ func Engine(cli *client.Client, ctx context.Context, w Workflow, sID string, vol
 		}
 		if toSkip {
 			*skippedStages = append(*skippedStages, stage.ID)
+			result.Skipped = true
 			LwCrossed.Println("Stage Skipped due to needed stage skipped")
 		} else {
 			if stage.Clean {
 				volClean, dirClean := CreateVolume(cli, ctx, false)
-				RunStage(stage, ctx, cli, allEnvs, w.Image, volClean, dirClean, volOutput, dirOutput, LwWhite)
+				success := RunStage(stage, ctx, cli, allEnvs, w.Image, volClean, dirClean, volOutput, dirOutput, LwWhite)
+				result.Result = success
 			} else {
-				RunStage(stage, ctx, cli, allEnvs, w.Image, vol, dir, volOutput, dirOutput, LwWhite)
+				success := RunStage(stage, ctx, cli, allEnvs, w.Image, vol, dir, volOutput, dirOutput, LwWhite)
+				result.Result = success
 			}
 		}
 
@@ -300,6 +278,8 @@ func Engine(cli *client.Client, ctx context.Context, w Workflow, sID string, vol
 	outputMap, err := ReadPropertiesFile(outputPath)
 	logger.HandleErr(err)
 	allOutputs[stage.ID] = outputMap
+	result.Outputs = outputMap
+	results <- result
 }
 
 func CreateVolume(cli *client.Client, ctx context.Context, mount bool) (vol types.Volume, dir string) {
@@ -341,7 +321,7 @@ func getVariablesFromExpression(condition string) []string {
 	return varList
 }
 
-func EvaluateCondition(condition string, availableValues []Env, LwWhite *logger.MyLogWriter) bool {
+func EvaluateCondition(condition string, availableValues []internaltypes.Env, LwWhite *logger.MyLogWriter) bool {
 	if condition != "" {
 		LwWhite.Write([]byte(fmt.Sprintf("Evaluating If Statement: %s, with the following variables: %s\n", condition, availableValues)))
 
@@ -350,8 +330,9 @@ func EvaluateCondition(condition string, availableValues []Env, LwWhite *logger.
 		parameters := make(map[string]interface{}, len(varList))
 
 		for _, v := range varList {
-			idx := slices.IndexFunc(availableValues, func(c Env) bool { return c.Name == v })
+			idx := slices.IndexFunc(availableValues, func(c internaltypes.Env) bool { return c.Name == v })
 			if idx == -1 {
+
 				// Not all variables can be populated. Thus the If statement is void.
 				return false
 			} else {
@@ -369,7 +350,7 @@ func EvaluateCondition(condition string, availableValues []Env, LwWhite *logger.
 	return true
 }
 
-func ExtractArtifacts(path string, s Stage) {
+func ExtractArtifacts(path string, s internaltypes.Stage) {
 	white := color.New(color.FgWhite).SprintFunc()
 
 	LwOperation := log.New(logger.NewLogWriter(func(str string, col color.Attribute) {

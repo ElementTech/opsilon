@@ -18,6 +18,8 @@ import (
 	_ "github.com/go-critic/go-critic/cmd/gocritic"
 	_ "github.com/golangci/golangci-lint/cmd/golangci-lint"
 	_ "github.com/gotesttools/gotestfmt/v2/cmd/gotestfmt"
+
+	// _ "github.com/swaggo/swag/cmd/swag"
 	_ "golang.org/x/lint/golint"
 	_ "golang.org/x/tools/cmd/goimports"
 	_ "mvdan.cc/gofumpt"

@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/jatalocks/opsilon/internal/engine"
+	"github.com/jatalocks/opsilon/internal/internaltypes"
 	"github.com/manifoldco/promptui"
 )
 
-func Confirm(act engine.Workflow) (bool, error) {
+func Confirm(act internaltypes.Workflow) (bool, error) {
 	prompt := promptui.Prompt{
 		Label:     fmt.Sprintf("Run %v", act.ID),
 		IsConfirm: true,

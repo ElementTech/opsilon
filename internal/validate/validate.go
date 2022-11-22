@@ -2,12 +2,11 @@ package validate
 
 import (
 	"errors"
-	"os"
 	"reflect"
 	"strings"
 
 	"github.com/jatalocks/opsilon/internal/config"
-	"github.com/jatalocks/opsilon/internal/engine"
+	"github.com/jatalocks/opsilon/internal/internaltypes"
 	"github.com/jatalocks/opsilon/internal/logger"
 	"gopkg.in/validator.v2"
 )
@@ -23,29 +22,38 @@ func noWhiteSpace(v interface{}, param string) error {
 	return nil
 }
 
-func ValidateRepoFile(w *config.RepoFile) {
+func ValidateRepoFile(w *config.RepoFile) error {
 	validator.SetValidationFunc("nowhitespace", noWhiteSpace)
 	if errs := validator.Validate(&w); errs != nil {
 		logger.Operation("Your Repo Config file has Problems:")
-		logger.Error(errs.Error())
-		os.Exit(1)
+		return errs
 	}
+	return nil
 }
 
-func ValidateRepo(w *config.Repo) {
+func ValidateRepo(w *config.Repo) error {
 	validator.SetValidationFunc("nowhitespace", noWhiteSpace)
 	if errs := validator.Validate(&w); errs != nil {
 		logger.Operation("Your Repo Config file has Problems:")
-		logger.Error(errs.Error())
-		os.Exit(1)
+		return errs
 	}
+	return nil
 }
 
-func ValidateWorkflows(w *[]engine.Workflow) {
+func ValidateWorkflows(w *[]internaltypes.Workflow) error {
 	validator.SetValidationFunc("nowhitespace", noWhiteSpace)
 	if errs := validator.Validate(&w); errs != nil {
 		logger.Operation("Your Workflows have Problems:")
-		logger.Error(errs.Error())
-		os.Exit(1)
+		return errs
 	}
+	return nil
+}
+
+func ValidateWorkflowsArgs(w []internaltypes.WorkflowArgument) error {
+	validator.SetValidationFunc("nowhitespace", noWhiteSpace)
+	if errs := validator.Validate(&w); errs != nil {
+		logger.Operation("Your Workflows Arguments have Problems:")
+		return errs
+	}
+	return nil
 }
