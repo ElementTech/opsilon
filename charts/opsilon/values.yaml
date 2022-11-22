@@ -25,7 +25,7 @@ image:
   # Which command to run (NOTE: ONLY SPECIFY IF YOU NEED, IF NOT SPECIFIED WILL USE DOCKER DEFAULT)
   command: ["./opsilon"]
   # What args to pass to the command (NOTE: ONLY SPECIFY IF YOU NEED, IF NOT SPECIFIED WILL USE DOCKER DEFAULT)
-  args: ["server","--kubernetes"]
+  args: ["server"]
   # Image pull policy: IfNotPresent / Always
   imagePullPolicy: Always
   ## Optionally specify an array of imagePullSecrets.
@@ -115,7 +115,9 @@ labelsEnableDefault: true
 lifecycle: {}
 
 # Environment variables (for globals, all deployments)
-globalEnvs: []
+globalEnvs:
+  - name: KUBERNETES
+    value: "true"
 
 # stdin and tty status
 tty: false
