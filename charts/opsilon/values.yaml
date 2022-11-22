@@ -27,7 +27,7 @@ image:
   # What args to pass to the command (NOTE: ONLY SPECIFY IF YOU NEED, IF NOT SPECIFIED WILL USE DOCKER DEFAULT)
   args: ["server","--kubernetes"]
   # Image pull policy: IfNotPresent / Always
-  imagePullPolicy: IfNotPresent
+  imagePullPolicy: Always
   ## Optionally specify an array of imagePullSecrets.
   ## Secrets must be manually created in the namespace.
   ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
