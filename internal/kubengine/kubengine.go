@@ -288,7 +288,10 @@ func NewClient() (*Client, error) {
 		return nil, err
 	}
 	clientCfg, _ := clientcmd.NewDefaultClientConfigLoadingRules().Load()
-	namespace := clientCfg.Contexts[clientCfg.CurrentContext].Namespace
+	namespace := ""
+	if len(clientCfg.Contexts) != 0 {
+		namespace = clientCfg.Contexts[clientCfg.CurrentContext].Namespace
+	}
 
 	if namespace == "" {
 		namespace = "default"
