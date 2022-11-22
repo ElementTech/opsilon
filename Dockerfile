@@ -10,6 +10,8 @@ RUN go mod download
 
 COPY . .
 
-RUN go build -ldflags "-s -w -X main.version=1.0.0" -o opsilon
+ENV PATH="${PATH}:/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin"
+
+RUN go build -ldflags "-X main.version=$(git describe --abbrev=0 --tags)" -o opsilon
 
 CMD [ "./opsilon" ]
