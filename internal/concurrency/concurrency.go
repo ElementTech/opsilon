@@ -47,6 +47,7 @@ func ToGraph(w internaltypes.Workflow, c echo.Context) {
 	skippedStages := make([]string, 0)
 	ctx := context.Background()
 	k8s := viper.GetBool("kubernetes")
+	fmt.Println("K8S", k8s)
 	results := make(chan internaltypes.Result)
 	resultsArray := []internaltypes.Result{}
 	if !k8s {
