@@ -7,10 +7,12 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/hashicorp/consul/api"
 	"github.com/jatalocks/opsilon/internal/config"
 	"github.com/jatalocks/opsilon/internal/logger"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	_ "github.com/spf13/viper/remote"
 )
 
 var cfgFile string
@@ -45,7 +47,18 @@ func init() {
 
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.opsilon.yaml)")
 	rootCmd.PersistentFlags().Bool("kubernetes", false, "Run in Kubernetes instead of Docker. You must be connected to a Kubernetes Context")
-	viper.BindPFlag("kubernetes", runCmd.Flags().Lookup("kubernetes"))
+	viper.BindPFlag("kubernetes", rootCmd.Flags().Lookup("kubernetes"))
+	rootCmd.PersistentFlags().Bool("local", true, "Run using a local file as config. Not a database. True for CLI.")
+	viper.BindPFlag("local", rootCmd.Flags().Lookup("local"))
+	rootCmd.PersistentFlags().Bool("database", false, "Run using a MongoDB database.")
+	viper.BindPFlag("database", rootCmd.Flags().Lookup("database"))
+	rootCmd.PersistentFlags().Bool("consul", false, "Run using a Consul Key/Value store. This is for distributed installation.")
+	viper.BindPFlag("consul", rootCmd.Flags().Lookup("consul"))
+	rootCmd.MarkFlagsMutuallyExclusive("local", "database")
+	rootCmd.PersistentFlags().String("mongodb_uri", "mongodb://mongodb:27017", "Mongodb URI. Can be set using ENV variable.")
+	viper.BindPFlag("mongodb_uri", rootCmd.Flags().Lookup("mongodb_uri"))
+	rootCmd.PersistentFlags().String("consul_uri", "localhost:8500", "Consul URI. Can be set using ENV variable.")
+	viper.BindPFlag("consul_uri", rootCmd.Flags().Lookup("consul_uri"))
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.
 	// rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
@@ -53,30 +66,51 @@ func init() {
 
 // initConfig reads in config file and ENV variables if set.
 func initConfig() {
-	if cfgFile != "" {
-		// Use config file from the flag.
-		viper.SetConfigFile(cfgFile)
+	consul, err := rootCmd.Flags().GetBool("consul")
+	logger.HandleErr(err)
+	if consul {
+		consul_uri, err := rootCmd.Flags().GetString("consul_uri")
+		logger.HandleErr(err)
+		viper.AddRemoteProvider("consul", consul_uri, "OPSILON")
+		viper.SetConfigType("yaml") // Need to explicitly set this to yaml
+
+		// Get a new client
+		client, err := api.NewClient(api.DefaultConfig())
+		logger.HandleErr(err)
+		// Get a handle to the KV API
+		kv := client.KV()
+		// PUT a new KV pair
+		err = viper.ReadInConfig()
+		if err != nil {
+			p := &api.KVPair{Key: "OPSILON", Value: []byte("")}
+			_, err = kv.Put(p, nil)
+			logger.HandleErr(err)
+		}
+
 	} else {
-		// Find home directory.
-		home, err := os.UserHomeDir()
-		cobra.CheckErr(err)
+		if cfgFile != "" {
+			// Use config file from the flag.
+			viper.SetConfigFile(cfgFile)
+		} else {
+			// Find home directory.
+			home, err := os.UserHomeDir()
+			cobra.CheckErr(err)
 
-		// Search config in home directory with name ".opsilon" (without extension).
-		viper.AddConfigPath(home)
-		viper.SetConfigType("yaml")
-		viper.SetConfigName(".opsilon")
-		viper.SafeWriteConfig()
+			// Search config in home directory with name ".opsilon" (without extension).
+			viper.AddConfigPath(home)
+			viper.SetConfigType("yaml")
+			viper.SetConfigName(".opsilon")
+			viper.SafeWriteConfig()
 
+		}
 	}
-
 	viper.AutomaticEnv() // read in environment variables that match
 
 	// If a config file is found, read it in.
-	err := viper.ReadInConfig()
+	err = viper.ReadInConfig()
 	if err != nil {
 		logger.Error("It seems that you don't yet have a repository config file. Please run:")
 		logger.Info("opsilon repo add")
-		os.Exit(1)
 	}
 	err2 := viper.Unmarshal(&[]config.RepoFile{})
 	if err2 != nil {

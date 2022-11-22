@@ -14,7 +14,7 @@ var addCmd = &cobra.Command{
 	Use:   "add",
 	Short: "Add a workflow repo",
 	Run: func(cmd *cobra.Command, args []string) {
-		initConfig()
+		// initConfig()
 		rtype := ""
 		if folderType {
 			rtype = "folder"
