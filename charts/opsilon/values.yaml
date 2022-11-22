@@ -23,7 +23,7 @@ image:
   # Which repo to use (NOTE: ONLY SPECIFY IF YOU ARE DEPLOYING EXTERNALLY)
   repository: jatalocks333/opsilon
   # Which command to run (NOTE: ONLY SPECIFY IF YOU NEED, IF NOT SPECIFIED WILL USE DOCKER DEFAULT)
-  command: ["opsilon"]
+  command: ["./opsilon"]
   # What args to pass to the command (NOTE: ONLY SPECIFY IF YOU NEED, IF NOT SPECIFIED WILL USE DOCKER DEFAULT)
   args: ["server","--kubernetes"]
   # Image pull policy: IfNotPresent / Always
