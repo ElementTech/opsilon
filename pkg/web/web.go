@@ -27,8 +27,8 @@ func App(port int64, v string) {
 		Description: "This API interface allows for interaction with Opsilon's components the same way CLI does.",
 		Version:     ver,
 		License: &echoswagger.License{
-			Name: "Apache 2.0",
-			URL:  "http://www.apache.org/licenses/LICENSE-2.0.html",
+			Name: "GNU GPLv3",
+			URL:  "https://spdx.org/licenses/GPL-3.0-or-later.html",
 		},
 	}).
 		SetResponseContentType("application/json").
