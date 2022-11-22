@@ -280,7 +280,7 @@ hostname: ""
 rbac:
   create: true
   rules:
-    - resources: ["pods", "pods/log", "serviceaccount","persistentvolumes","persistentvolumeclaims"]
+    - resources: ["pods", "pods/log", "pods/exec", "serviceaccount", "persistentvolumes", "persistentvolumeclaims"]
       verbs: ["*"]
     ## Define specific rbac permissions.
     # Eg: This grants all on API groups
