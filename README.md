@@ -48,7 +48,7 @@ Make sure you have Docker installed on your computer (Or Connected to a kubernet
  **EITHER**
 1. Connect to the examples folder present in this repository
 ```sh
-$ opsilon repo add --git -n examples -d examples -s examples/workflows -p https://github.>com/jatalocks/opsilon.git -b main
+$ opsilon repo add --git -n examples -d examples -s examples/workflows -p https://github.com/jatalocks/opsilon.git -b main
 # For private repositories, use https://myuser:github_token@github.com/myprivateorg/>myprivaterepo.git
 ```
 2. List available workflows
