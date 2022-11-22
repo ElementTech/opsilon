@@ -22,7 +22,18 @@ var ver string
 func App(port int64, v string) {
 	ver = v
 	// Echo instance
-	e := echoswagger.New(echo.New(), "/api/v1/docs", nil)
+	e := echoswagger.New(echo.New(), "/api/v1/docs", &echoswagger.Info{
+		Title:       "Opsilon API",
+		Description: "This API interface allows for interaction with Opsilon's components the same way CLI does.",
+		Version:     ver,
+		License: &echoswagger.License{
+			Name: "Apache 2.0",
+			URL:  "http://www.apache.org/licenses/LICENSE-2.0.html",
+		},
+	}).
+		SetResponseContentType("application/json").
+		SetScheme("https", "http").
+		SetUI(echoswagger.UISetting{DetachSpec: true, HideTop: true})
 
 	// Middleware
 	e.Echo().Use(middleware.Logger())
