@@ -1,1 +1,57 @@
-../../../templates/service.yaml
+{{- if .Values.service.enabled }}
+################################################
+# Standardized Templates - Service
+# Author/Maintainer: Farley <farley@neonsurge.com>
+################################################
+apiVersion: v1
+kind: Service
+
+metadata:
+  # Should use name: {{ template "name" . }}
+  name: {{ template "name" . }}
+
+  annotations:
+    # Our service annotations (old method, backwards compatability)
+{{- with .Values.serviceAnnotations }}
+{{ toYaml . | indent 4 }}
+{{- end }}
+    # Our service annotations (new)
+{{- with .Values.service.annotations }}
+{{ toYaml . | indent 4 }}
+{{- end }}
+
+  # include labels for this service to identify it
+{{- include "labels" . | indent 2 }}
+
+# Service definition
+spec:
+  type: {{ .Values.service.type }}
+{{- if default false .Values.service.headless }}
+  clusterIP: None
+{{- end }}
+{{- if .Values.service.externalTrafficPolicy }}
+  externalTrafficPolicy: {{ .Values.service.externalTrafficPolicy }}
+{{- end }}
+  ports:
+    - port: {{ .Values.service.port }}
+      targetPort: {{ .Values.service.targetPort }}
+      protocol: TCP
+      name: {{ .Values.service.name }}
+{{- if .Values.service.additionalPorts }}
+{{ toYaml .Values.service.additionalPorts | indent 4 }}
+{{- end }}
+  selector:
+{{- if .Values.usingNewRecommendedLabels }}
+{{- if .Values.labelsEnableDefault }}
+    app.kubernetes.io/name: {{ template "name" . }}
+{{- end }}
+{{- else }}
+{{- if .Values.labelsEnableDefault }}
+    app: {{ template "name" . }}
+{{- end }}
+{{- end }}
+{{- if .Values.labels }}
+{{ toYaml .Values.labels | indent 4 }}
+{{- end }}
+
+{{- end }}
