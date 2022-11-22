@@ -6,7 +6,6 @@ package cmd
 import (
 	"github.com/jatalocks/opsilon/pkg/web"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 var port int64
@@ -35,8 +34,7 @@ func init() {
 	// Cobra supports Persistent Flags which will work for this command
 	// and all subcommands, e.g.:
 	serverCmd.Flags().Int64VarP(&port, "port", "p", 8080, "Port to start the web server in")
-	serverCmd.Flags().Bool("kubernetes", false, "Run in Kubernetes instead of Docker. You must be connected to a Kubernetes Context")
-	viper.BindPFlag("kubernetes", serverCmd.Flags().Lookup("kubernetes"))
+	// viper.BindPFlag("kubernetes", serverCmd.Flags().Lookup("kubernetes"))
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
 	// serverCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
