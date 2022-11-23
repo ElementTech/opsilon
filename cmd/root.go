@@ -59,6 +59,7 @@ func init() {
 	viper.BindPFlag("mongodb_uri", rootCmd.Flags().Lookup("mongodb_uri"))
 	rootCmd.PersistentFlags().String("consul_uri", "localhost:8500", "Consul URI. Can be set using ENV variable.")
 	viper.BindPFlag("consul_uri", rootCmd.Flags().Lookup("consul_uri"))
+	rootCmd.PersistentFlags().String("consul_key", "default", "Consul Config Key. Can be set using ENV variable.")
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.
 	// rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
@@ -72,7 +73,9 @@ func initConfig() {
 	if consul {
 		consul_uri, err := rootCmd.Flags().GetString("consul_uri")
 		logger.HandleErr(err)
-		viper.AddRemoteProvider("consul", consul_uri, "OPSILON")
+		consul_key, err := rootCmd.Flags().GetString("consul_key")
+		logger.HandleErr(err)
+		viper.AddRemoteProvider("consul", consul_uri, consul_key)
 		viper.SetConfigType("yaml") // Need to explicitly set this to yaml
 
 		// Get a new client
@@ -81,16 +84,13 @@ func initConfig() {
 		// Get a handle to the KV API
 		kv := client.KV()
 		// PUT a new KV pair
-		err = viper.ReadInConfig()
+		err = viper.ReadRemoteConfig()
 		if err != nil {
 			p := &api.KVPair{Key: "OPSILON", Value: []byte("")}
 			_, err = kv.Put(p, nil)
 			logger.HandleErr(err)
 		}
 		viper.AutomaticEnv() // read in environment variables that match
-
-		// If a config file is found, read it in.
-		err = viper.ReadRemoteConfig()
 
 	} else {
 		if cfgFile != "" {
@@ -129,7 +129,7 @@ func initConfig() {
 		if consul {
 			fmt.Fprintln(os.Stderr, "Using consul", consul_uri)
 		} else {
-			fmt.Fprintln(os.Stderr, "Using config file:", viper.RemoteConfig)
+			fmt.Fprintln(os.Stderr, "Using config file:", viper.ConfigFileUsed())
 		}
 	}
 }

@@ -29,16 +29,18 @@ func Delete(repoList []string) error {
 	for _, v := range removeList {
 		configFile.Repositories = RemoveIndex(configFile.Repositories, slices.IndexFunc(configFile.Repositories, func(c config.Repo) bool { return c.Name == v }))
 	}
-
 	viper.Set("", configFile)
-	err := viper.WriteConfig()
-	if err != nil {
-		return err
-	}
 	config.SaveToConfig(*configFile)
-	err = viper.ReadInConfig()
-	if err != nil {
-		return err
+	if !viper.GetBool("consul") {
+		err := viper.ReadInConfig()
+		if err != nil {
+			return err
+		}
+	} else {
+		err := viper.ReadRemoteConfig()
+		if err != nil {
+			return err
+		}
 	}
 	List()
 	return nil
