@@ -67,6 +67,7 @@ func init() {
 // initConfig reads in config file and ENV variables if set.
 func initConfig() {
 	consul, err := rootCmd.Flags().GetBool("consul")
+	viper.Set("consul", consul)
 	logger.HandleErr(err)
 	if consul {
 		consul_uri, err := rootCmd.Flags().GetString("consul_uri")
@@ -86,6 +87,10 @@ func initConfig() {
 			_, err = kv.Put(p, nil)
 			logger.HandleErr(err)
 		}
+		viper.AutomaticEnv() // read in environment variables that match
+
+		// If a config file is found, read it in.
+		err = viper.ReadRemoteConfig()
 
 	} else {
 		if cfgFile != "" {
@@ -103,11 +108,12 @@ func initConfig() {
 			viper.SafeWriteConfig()
 
 		}
-	}
-	viper.AutomaticEnv() // read in environment variables that match
+		viper.AutomaticEnv() // read in environment variables that match
 
-	// If a config file is found, read it in.
-	err = viper.ReadInConfig()
+		// If a config file is found, read it in.
+		err = viper.ReadInConfig()
+	}
+
 	if err != nil {
 		logger.Error("It seems that you don't yet have a repository config file. Please run:")
 		logger.Info("opsilon repo add")
@@ -115,10 +121,15 @@ func initConfig() {
 	err2 := viper.Unmarshal(&[]config.RepoFile{})
 	if err2 != nil {
 		logger.Error("There appears to be a problem with your configuration. Please refer to the docs or run opsilon repo command.")
-		os.Exit(1)
 	}
 	logger.HandleErr(err2)
+	consul_uri, err := rootCmd.Flags().GetString("consul_uri")
+	logger.HandleErr(err)
 	if err == nil {
-		fmt.Fprintln(os.Stderr, "Using config file:", viper.ConfigFileUsed())
+		if consul {
+			fmt.Fprintln(os.Stderr, "Using consul", consul_uri)
+		} else {
+			fmt.Fprintln(os.Stderr, "Using config file:", viper.RemoteConfig)
+		}
 	}
 }
