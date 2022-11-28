@@ -6,6 +6,7 @@ import (
 	"log"
 	"time"
 
+	"github.com/jatalocks/opsilon/internal/internaltypes"
 	"github.com/jatalocks/opsilon/internal/logger"
 	"github.com/spf13/viper"
 	"go.mongodb.org/mongo-driver/bson"
@@ -146,7 +147,26 @@ func FindOne(collection string, filter bson.D, doc interface{}) error {
 	return nil
 }
 
-func FindMany(collection string, filter bson.D, docs []interface{}) error {
+func FindManyWorkflows(collection string, filter bson.D, docs []internaltypes.Workflow) error {
+	coll := client.Database("opsilon").Collection(collection)
+	// filter := bson.D{{"name", "Bagels N Buns"}}
+	cursor, err := coll.Find(context.TODO(), filter)
+	if err != nil {
+		return err
+	}
+	if err = cursor.All(context.TODO(), &docs); err != nil {
+		return err
+	}
+
+	for _, doc := range docs {
+		cursor.Decode(&doc)
+		if err != nil {
+			return err
+		}
+	}
+	return err
+}
+func FindManyResults(collection string, filter bson.D, docs []internaltypes.Result) error {
 	coll := client.Database("opsilon").Collection(collection)
 	// filter := bson.D{{"name", "Bagels N Buns"}}
 	cursor, err := coll.Find(context.TODO(), filter)

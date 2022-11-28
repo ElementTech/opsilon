@@ -1,6 +1,7 @@
 package internaltypes
 
 type Result struct {
+	_id      string
 	Workflow string
 	Stage    Stage
 	Result   bool
@@ -39,6 +40,7 @@ type Env struct {
 }
 
 type Workflow struct {
+	_id         string
 	ID          string  `mapstructure:"id" validate:"nonzero,nowhitespace"`
 	Image       string  `mapstructure:"image" validate:"nonzero,nowhitespace"`
 	Description string  `mapstructure:"description"`
