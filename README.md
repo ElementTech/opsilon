@@ -45,7 +45,7 @@ Move the executable to a folder on your `$PATH`:
 $ mv opsilon /usr/local/bin/opsilon # or /usr/bin/opsilon
 ```
 ## Usage
-Make sure you have Docker installed on your computer (Or Connected to a kubernetes cluster `--kubernetes`).
+Make sure you have Docker installed on your computer (or connected to a kubernetes cluster `--kubernetes`).
  **EITHER**
 1. Connect to the examples folder present in this repository
 ```sh
