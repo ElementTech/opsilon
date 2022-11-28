@@ -26,10 +26,10 @@ This project serves the purpose of giving developers, operations and other perso
 # Download
 ### Quickstart
 
-Download the [latest release](https://github.com/jatalocks/opsilon/releases/latest) for your os: (this example uses version `v0.2.0`).
+Download the [latest release](https://github.com/jatalocks/opsilon/releases/latest) for your os: (this example uses version `v0.3.0`).
 For Mac:
 ```bash
-$ curl -L https://github.com/jatalocks/opsilon/releases/download/v0.2.0-alpha/opsilon_0.2.0-alpha_Darwin_x86_64.tar.gz \
+$ curl -L https://github.com/jatalocks/opsilon/releases/download/v0.3.0-alpha/opsilon_0.3.0-alpha_Darwin_x86_64.tar.gz \
  | tar -xz opsilon | chmod u+x opsilon
 ```
 Test if the Opsilon CLI works: *(When it doesn't work, you may have downloaded the wrong file or your device/os isn't supported)*
@@ -62,7 +62,7 @@ $ opsilon run # --kubernetes (kubernetes instead of docker)
  **OR**
 1. Start the web server
 ```sh
-$ opsilon server -p 8080 # --kubernetes (kubernetes instead of docker)
+$ opsilon server -p 8080 # --kubernetes (kubernetes instead of docker) --database (update results in mongodb) --consul (connect to a remote configuration)
 ```
 2. List available API actions
 ```sh
