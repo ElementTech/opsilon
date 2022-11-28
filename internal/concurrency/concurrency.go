@@ -10,13 +10,16 @@ import (
 
 	"github.com/docker/docker/client"
 	"github.com/jatalocks/opsilon/internal/config"
+	"github.com/jatalocks/opsilon/internal/db"
 	"github.com/jatalocks/opsilon/internal/engine"
 	"github.com/jatalocks/opsilon/internal/internaltypes"
 	"github.com/jatalocks/opsilon/internal/kubengine"
 	"github.com/jatalocks/opsilon/internal/logger"
 	"github.com/kendru/darwin/go/depgraph"
 	"github.com/labstack/echo/v4"
+	"github.com/mitchellh/hashstructure/v2"
 	"github.com/spf13/viper"
+	"go.mongodb.org/mongo-driver/bson"
 )
 
 func workflowToGraph(g *depgraph.Graph, w internaltypes.Workflow) {
@@ -70,7 +73,7 @@ func ToGraph(w internaltypes.Workflow, c echo.Context) {
 			if (len(layer) > 0) && (layer[0] != "") {
 				fmt.Printf("Running in Parallel: %s\n", strings.Join(layer, ", "))
 				wg.Add(len(layer))
-				go processResults(&results, &resultsArray, c)
+				go processResults(&results, &resultsArray, c, w)
 				go runStageGroupDocker(wg, layer, cli, ctx, w, allOutputs, &skippedStages, results)
 				wg.Wait()
 			}
@@ -90,7 +93,7 @@ func ToGraph(w internaltypes.Workflow, c echo.Context) {
 				fmt.Printf("Running in Parallel: %s\n", strings.Join(layer, ", "))
 				wg.Add(len(layer))
 
-				go processResults(&results, &resultsArray, c)
+				go processResults(&results, &resultsArray, c, w)
 				// go runStageGroupKubernetes(cli, wg, layer, ctx, w, vol, claim, allOutputs, &skippedStages, results)
 				go runStageGroupKubernetes(cli, wg, layer, ctx, w, allOutputs, &skippedStages, results)
 				wg.Wait()
@@ -102,9 +105,19 @@ func ToGraph(w internaltypes.Workflow, c echo.Context) {
 	config.PrintStageResults(resultsArray)
 }
 
-func processResults(results *chan internaltypes.Result, resultsArray *[]internaltypes.Result, c echo.Context) {
+func processResults(results *chan internaltypes.Result, resultsArray *[]internaltypes.Result, c echo.Context, w internaltypes.Workflow) {
 	for str := range *results {
 		*resultsArray = append(*resultsArray, str)
+		hash, err := hashstructure.Hash(w, hashstructure.FormatV2, nil)
+		strHash := fmt.Sprint(hash)
+		logger.HandleErr(err)
+		str.Workflow = strHash
+		go func() {
+			go db.ReplaceOne("workflows", bson.M{"_id": strHash}, w)
+			logger.HandleErr(err)
+			go db.InsertOne("results", str)
+			logger.HandleErr(err)
+		}()
 		if str.Result {
 			logger.Success("Stage", str.Stage.ID, "Success")
 		} else {

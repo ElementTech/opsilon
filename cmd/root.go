@@ -9,6 +9,7 @@ import (
 
 	"github.com/hashicorp/consul/api"
 	"github.com/jatalocks/opsilon/internal/config"
+	"github.com/jatalocks/opsilon/internal/db"
 	"github.com/jatalocks/opsilon/internal/logger"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -55,7 +56,7 @@ func init() {
 	rootCmd.PersistentFlags().Bool("consul", false, "Run using a Consul Key/Value store. This is for distributed installation.")
 
 	rootCmd.MarkFlagsMutuallyExclusive("local", "database")
-	rootCmd.PersistentFlags().String("mongodb_uri", "mongodb://mongodb:27017", "Mongodb URI. Can be set using ENV variable.")
+	rootCmd.PersistentFlags().String("mongodb_uri", "mongodb://localhost:27017", "Mongodb URI. Can be set using ENV variable.")
 
 	rootCmd.PersistentFlags().String("consul_uri", "localhost:8500", "Consul URI. Can be set using ENV variable.")
 
@@ -139,4 +140,6 @@ func initConfig() {
 			fmt.Fprintln(os.Stderr, "Using config file:", viper.ConfigFileUsed())
 		}
 	}
+
+	db.Init()
 }

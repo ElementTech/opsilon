@@ -1,11 +1,12 @@
 package internaltypes
 
 type Result struct {
-	Stage   Stage
-	Result  bool
-	Skipped bool
-	Outputs []Env
-	Logs    []string
+	Workflow string
+	Stage    Stage
+	Result   bool
+	Skipped  bool
+	Outputs  []Env
+	Logs     []string
 }
 
 type Input struct {

@@ -2,9 +2,11 @@ package db
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"time"
 
+	"github.com/jatalocks/opsilon/internal/logger"
 	"github.com/spf13/viper"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -13,7 +15,9 @@ import (
 
 var client mongo.Client
 
-func init() {
+func Init() {
+	dbEnabled := viper.GetBool("database")
+	fmt.Println("DB Enabled:", dbEnabled)
 	if viper.GetBool("database") {
 		uri := viper.GetString("mongodb_uri")
 		if uri == "" {
@@ -28,6 +32,7 @@ func init() {
 		if err != nil {
 			log.Fatal(err)
 		}
+		client.Database("opsilon")
 		defer client.Disconnect(ctx)
 	}
 }
@@ -41,16 +46,19 @@ func Count(collection string, filter bson.D) (error, int64) {
 	return nil, count
 }
 
-func InsertOne(collection string, filter bson.D, doc interface{}) error {
+func InsertOne(collection string, doc interface{}) error {
+	clientOptions := options.Client().ApplyURI(viper.GetString("mongodb_uri"))
+	client, err := mongo.Connect(context.TODO(), clientOptions)
+	logger.HandleErr(err)
 	coll := client.Database("opsilon").Collection(collection)
-	_, err := coll.InsertOne(context.TODO(), doc)
+	_, err = coll.InsertOne(context.TODO(), doc)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func InsertMany(collection string, filter bson.D, docs []interface{}) error {
+func InsertMany(collection string, docs []interface{}) error {
 	coll := client.Database("opsilon").Collection(collection)
 	_, err := coll.InsertMany(context.TODO(), docs)
 	if err != nil {
@@ -59,9 +67,24 @@ func InsertMany(collection string, filter bson.D, docs []interface{}) error {
 	return nil
 }
 
-func UpdateOne(collection string, filter bson.D, update bson.D) error {
+func UpdateOne(collection string, filter bson.D, update interface{}) error {
+	clientOptions := options.Client().ApplyURI(viper.GetString("mongodb_uri"))
+	client, err := mongo.Connect(context.TODO(), clientOptions)
+	logger.HandleErr(err)
 	coll := client.Database("opsilon").Collection(collection)
-	_, err := coll.UpdateOne(context.TODO(), filter, update)
+	_, err = coll.UpdateOne(context.TODO(), filter, update, &options.UpdateOptions{Upsert: mongo.NewUpdateOneModel().Upsert})
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func UpdateByID(collection string, id string, update interface{}) error {
+	clientOptions := options.Client().ApplyURI(viper.GetString("mongodb_uri"))
+	client, err := mongo.Connect(context.TODO(), clientOptions)
+	logger.HandleErr(err)
+	coll := client.Database("opsilon").Collection(collection)
+	_, err = coll.UpdateByID(context.TODO(), bson.D{{"_id", id}}, update, &options.UpdateOptions{Upsert: mongo.NewUpdateOneModel().Upsert})
 	if err != nil {
 		return err
 	}
@@ -77,13 +100,18 @@ func UpdateMany(collection string, filter bson.D, update bson.D) error {
 	return nil
 }
 
-func ReplaceOne(collection string, filter bson.D, replacement bson.D) error {
+func ReplaceOne(collection string, filter interface{}, replacement interface{}) error {
+	clientOptions := options.Client().ApplyURI(viper.GetString("mongodb_uri"))
+	client, err := mongo.Connect(context.TODO(), clientOptions)
+	opts := options.Replace().SetUpsert(true)
+	logger.HandleErr(err)
 	coll := client.Database("opsilon").Collection(collection)
-	_, err := coll.ReplaceOne(context.TODO(), filter, replacement)
+	_, err = coll.ReplaceOne(context.TODO(), filter, replacement, opts)
 	if err != nil {
 		return err
 	}
 	return nil
+
 }
 
 func DeleteOne(collection string, filter bson.D) error {
