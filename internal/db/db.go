@@ -39,6 +39,9 @@ func Init() {
 }
 
 func Count(collection string, filter bson.D) (error, int64) {
+	clientOptions := options.Client().ApplyURI(viper.GetString("mongodb_uri"))
+	client, err := mongo.Connect(context.TODO(), clientOptions)
+	logger.HandleErr(err)
 	coll := client.Database("opsilon").Collection(collection)
 	count, err := coll.CountDocuments(context.TODO(), filter)
 	if err != nil {
@@ -60,8 +63,11 @@ func InsertOne(collection string, doc interface{}) error {
 }
 
 func InsertMany(collection string, docs []interface{}) error {
+	clientOptions := options.Client().ApplyURI(viper.GetString("mongodb_uri"))
+	client, err := mongo.Connect(context.TODO(), clientOptions)
+	logger.HandleErr(err)
 	coll := client.Database("opsilon").Collection(collection)
-	_, err := coll.InsertMany(context.TODO(), docs)
+	_, err = coll.InsertMany(context.TODO(), docs)
 	if err != nil {
 		return err
 	}
@@ -93,8 +99,11 @@ func UpdateByID(collection string, id string, update interface{}) error {
 }
 
 func UpdateMany(collection string, filter bson.D, update bson.D) error {
+	clientOptions := options.Client().ApplyURI(viper.GetString("mongodb_uri"))
+	client, err := mongo.Connect(context.TODO(), clientOptions)
+	logger.HandleErr(err)
 	coll := client.Database("opsilon").Collection(collection)
-	_, err := coll.UpdateMany(context.TODO(), filter, update)
+	_, err = coll.UpdateMany(context.TODO(), filter, update)
 	if err != nil {
 		return err
 	}
@@ -116,8 +125,11 @@ func ReplaceOne(collection string, filter interface{}, replacement interface{}) 
 }
 
 func DeleteOne(collection string, filter bson.D) error {
+	clientOptions := options.Client().ApplyURI(viper.GetString("mongodb_uri"))
+	client, err := mongo.Connect(context.TODO(), clientOptions)
+	logger.HandleErr(err)
 	coll := client.Database("opsilon").Collection(collection)
-	_, err := coll.DeleteOne(context.TODO(), filter)
+	_, err = coll.DeleteOne(context.TODO(), filter)
 	if err != nil {
 		return err
 	}
@@ -125,8 +137,11 @@ func DeleteOne(collection string, filter bson.D) error {
 }
 
 func DeleteMany(collection string, filter bson.D) error {
+	clientOptions := options.Client().ApplyURI(viper.GetString("mongodb_uri"))
+	client, err := mongo.Connect(context.TODO(), clientOptions)
+	logger.HandleErr(err)
 	coll := client.Database("opsilon").Collection(collection)
-	_, err := coll.DeleteMany(context.TODO(), filter)
+	_, err = coll.DeleteMany(context.TODO(), filter)
 	if err != nil {
 		return err
 	}
@@ -134,9 +149,12 @@ func DeleteMany(collection string, filter bson.D) error {
 }
 
 func FindOne(collection string, filter bson.D, doc interface{}) error {
+	clientOptions := options.Client().ApplyURI(viper.GetString("mongodb_uri"))
+	client, err := mongo.Connect(context.TODO(), clientOptions)
+	logger.HandleErr(err)
 	coll := client.Database("opsilon").Collection(collection)
 	// filter := bson.D{{"name", "Bagels N Buns"}}
-	err := coll.FindOne(context.TODO(), filter).Decode(&doc)
+	err = coll.FindOne(context.TODO(), filter).Decode(&doc)
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
 			// This error means your query did not match any documents.
@@ -147,26 +165,34 @@ func FindOne(collection string, filter bson.D, doc interface{}) error {
 	return nil
 }
 
-func FindManyWorkflows(collection string, filter bson.D, docs []internaltypes.Workflow) error {
+func FindMany(collection string, filter bson.D) ([]interface{}, error) {
+	var docs []interface{}
+	clientOptions := options.Client().ApplyURI(viper.GetString("mongodb_uri"))
+	client, err := mongo.Connect(context.TODO(), clientOptions)
+	logger.HandleErr(err)
 	coll := client.Database("opsilon").Collection(collection)
 	// filter := bson.D{{"name", "Bagels N Buns"}}
 	cursor, err := coll.Find(context.TODO(), filter)
 	if err != nil {
-		return err
+		return docs, err
 	}
 	if err = cursor.All(context.TODO(), &docs); err != nil {
-		return err
+		return docs, err
 	}
 
-	for _, doc := range docs {
-		cursor.Decode(&doc)
-		if err != nil {
-			return err
-		}
-	}
-	return err
+	// for _, doc := range docs {
+	// 	err := cursor.Decode(&doc)
+	// 	if err != nil {
+	// 		return err, nil
+	// 	}
+
+	// }
+	return docs, err
 }
 func FindManyResults(collection string, filter bson.D, docs []internaltypes.Result) error {
+	clientOptions := options.Client().ApplyURI(viper.GetString("mongodb_uri"))
+	client, err := mongo.Connect(context.TODO(), clientOptions)
+	logger.HandleErr(err)
 	coll := client.Database("opsilon").Collection(collection)
 	// filter := bson.D{{"name", "Bagels N Buns"}}
 	cursor, err := coll.Find(context.TODO(), filter)
@@ -178,7 +204,7 @@ func FindManyResults(collection string, filter bson.D, docs []internaltypes.Resu
 	}
 
 	for _, doc := range docs {
-		cursor.Decode(&doc)
+		err := cursor.Decode(&doc)
 		if err != nil {
 			return err
 		}
