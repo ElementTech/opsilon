@@ -12,6 +12,7 @@ For full usage, please refer to the: [Docs](/assets/doc.md).
 - [Download](#download)
     - [Quickstart](#quickstart)
   - [Usage](#usage)
+    - [Extra Flags](#extra-flags)
 - [Demo](#demo)
 - [Contribution](#contribution)
     - [Development Features](#development-features)
@@ -62,12 +63,24 @@ $ opsilon run # --kubernetes (kubernetes instead of docker)
  **OR**
 1. Start the web server
 ```sh
-$ opsilon server -p 8080 # --kubernetes (kubernetes instead of docker) --database (update results in mongodb) --consul (connect to a remote configuration)
+$ opsilon server -p 8080 # See extra flags below
 ```
 2. List available API actions
 ```sh
 $ Go to http://localhost:8080/api/v1/docs
 ```
+### Extra Flags
+`--kubernetes` - (kubernetes instead of docker)
+___
+
+**`--server` will usually come with:**
+
+`--consul`  - Enable a consul server as a configuration endpoint. Allows for a distributed remote configuration of workflows and repositories instead of a local file.
+   - `--consul_uri` = `localhost:8500` by default
+   - `--consul_key` = `default` by default (which key to load configuration from)
+  
+`--database`  - Enable a mongodb database. Allows for logging and viewing workflow runs.
+   - `--mongodb_uri` = `mongodb://localhost:27017` by default
 # Demo
 
 ```sh
