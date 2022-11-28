@@ -65,6 +65,9 @@ func PrintStageResults(results []internaltypes.Result) {
 	var data [][]string
 
 	for _, r := range results {
+		// for _, v := range r.Logs {
+		// 	fmt.Println(r.Stage.ID, v)
+		// }
 		row := []string{r.Stage.Stage, r.Stage.ID, fmt.Sprint(r.Result), fmt.Sprint(r.Skipped), fmt.Sprint(engine.GenEnv(r.Outputs)), fmt.Sprint(len(r.Logs))}
 		data = append(data, row)
 	}

@@ -24,6 +24,12 @@ type Stage struct {
 	Artifacts []string `mapstructure:"artifacts,omitempty"`
 	Image     string   `mapstructure:"image,omitempty"`
 	Needs     string   `mapstructure:"needs,omitempty" validate:"nowhitespace"`
+	Import    []Import `mapstructure:"import,omitempty"`
+}
+
+type Import struct {
+	From      string   `mapstructure:"from" validate:"nonzero,nowhitespace"`
+	Artifacts []string `mapstructure:"artifacts" validate:"nonzero"`
 }
 
 type Env struct {
@@ -37,9 +43,9 @@ type Workflow struct {
 	Description string  `mapstructure:"description"`
 	Env         []Env   `mapstructure:"env"`
 	Input       []Input `mapstructure:"input"`
-	Mount       bool    `mapstructure:"mount"`
-	Stages      []Stage `mapstructure:"stages" validate:"nonzero"`
-	Repo        string  `mapstructure:"repository,omitempty"` // To be filled automatically. Not part of YAML.
+	// Mount       bool    `mapstructure:"mount"`
+	Stages []Stage `mapstructure:"stages" validate:"nonzero"`
+	Repo   string  `mapstructure:"repository,omitempty"` // To be filled automatically. Not part of YAML.
 }
 
 type WorkflowArgument struct {

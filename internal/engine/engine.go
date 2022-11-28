@@ -4,7 +4,8 @@ import (
 	"bufio"
 	"context"
 	"fmt"
-	"io/ioutil"
+	"io"
+	"io/fs"
 	"log"
 	"os"
 	"path"
@@ -24,7 +25,6 @@ import (
 	"github.com/fatih/color"
 	"github.com/jatalocks/opsilon/internal/internaltypes"
 	"github.com/jatalocks/opsilon/internal/logger"
-	cp "github.com/otiai10/copy"
 	"golang.org/x/exp/slices"
 )
 
@@ -97,7 +97,75 @@ func RemoveVolume(name string, ctx context.Context, cli *client.Client) (removed
 	return true, nil
 }
 
-func RunStage(s internaltypes.Stage, ctx context.Context, cli *client.Client, envs []internaltypes.Env, globalImage string, volume types.Volume, dir string, volumeOutput types.Volume, dirOutput string, LwWhite *logger.MyLogWriter) bool {
+// CopyDir copies the content of src to dst. src should be a full path.
+func Copy(src, dst string) error {
+
+	return filepath.Walk(src, func(path string, info fs.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		// copy to this path
+		outpath := filepath.Join(dst, strings.TrimPrefix(path, src))
+
+		if info.IsDir() {
+			os.MkdirAll(outpath, info.Mode())
+			return nil // means recursive
+		}
+
+		// handle irregular files
+		if !info.Mode().IsRegular() {
+			switch info.Mode().Type() & os.ModeType {
+			case os.ModeSymlink:
+				link, err := os.Readlink(path)
+				if err != nil {
+					return err
+				}
+				return os.Symlink(link, outpath)
+			}
+			return nil
+		}
+
+		// copy contents of regular file efficiently
+
+		// open input
+		in, _ := os.Open(path)
+		if err != nil {
+			return err
+		}
+		defer in.Close()
+
+		// create output
+		fh, err := os.Create(outpath)
+		if err != nil {
+			return err
+		}
+		defer fh.Close()
+
+		// make it the same
+		fh.Chmod(info.Mode())
+
+		// copy content
+		_, err = io.Copy(fh, in)
+		return err
+	})
+}
+func LoadImportsIntoStage(s internaltypes.Stage, targetDir string) {
+	current, _ := os.Getwd()
+	for _, v := range s.Import {
+		for _, a := range v.Artifacts {
+			from := filepath.Join(current, v.From, a)
+			to := filepath.Join(targetDir, a)
+			fmt.Println("Copying", from, "To", to)
+			err := Copy(from, to)
+			if err != nil {
+				fmt.Println(err)
+			}
+		}
+	}
+}
+
+func RunStage(s internaltypes.Stage, ctx context.Context, cli *client.Client, envs []internaltypes.Env, globalImage string, volume types.Volume, dir string, volumeOutput types.Volume, dirOutput string, LwWhite *logger.MyLogWriter, LwRed *logger.MyLogWriter) bool {
 	PullImage(s.Image, ctx, cli)
 	if s.Image != "" {
 		globalImage = s.Image
@@ -120,6 +188,7 @@ func RunStage(s internaltypes.Stage, ctx context.Context, cli *client.Client, en
 		Target: "/output",
 	})
 	// }
+	LoadImportsIntoStage(s, dir)
 
 	hostConfig.Mounts = mounts
 	allEnvs := GenEnv(envs)
@@ -140,20 +209,22 @@ func RunStage(s internaltypes.Stage, ctx context.Context, cli *client.Client, en
 	if err := cli.ContainerStart(ctx, resp.ID, types.ContainerStartOptions{}); err != nil {
 		panic(err)
 	}
+	statusCh, errCh := cli.ContainerWait(ctx, resp.ID, container.WaitConditionNextExit)
 
-	statusCh, errCh := cli.ContainerWait(ctx, resp.ID, container.WaitConditionNotRunning)
-	out, err := cli.ContainerLogs(ctx, resp.ID, types.ContainerLogsOptions{ShowStdout: true})
+	out, err := cli.ContainerLogs(ctx, resp.ID, types.ContainerLogsOptions{ShowStdout: true, ShowStderr: true})
 	logger.HandleErr(err)
+	stdcopy.StdCopy(LwWhite, LwRed, out)
 
-	stdcopy.StdCopy(LwWhite, LwWhite, out)
 	select {
 	case err := <-errCh:
-		logger.HandleErr(err)
-	case <-statusCh:
-		status, err := cli.ContainerInspect(ctx, resp.ID)
-		logger.HandleErr(err)
-
-		return status.State.ExitCode == 0
+		logger.Error(err.Error())
+	case status := <-statusCh:
+		// stat, err := cli.ContainerInspect(ctx, resp.ID)
+		// if err != nil {
+		// 	fmt.Println(err)
+		// }
+		// fmt.Println("STAT", stat.State)
+		return status.StatusCode == 0
 	}
 
 	return false
@@ -205,7 +276,7 @@ func ReadPropertiesFile(filename string) ([]internaltypes.Env, error) {
 	return config, nil
 }
 
-func PrepareStage(wEnv []internaltypes.Env, sEnv []internaltypes.Env, inputs []internaltypes.Input, needs string, allOutputs map[string][]internaltypes.Env, stage string, id string, result *internaltypes.Result) ([]internaltypes.Env, []string, *logger.MyLogWriter, *log.Logger) {
+func PrepareStage(wEnv []internaltypes.Env, sEnv []internaltypes.Env, inputs []internaltypes.Input, needs string, allOutputs map[string][]internaltypes.Env, stage string, id string, result *internaltypes.Result) ([]internaltypes.Env, []string, *logger.MyLogWriter, *log.Logger, *logger.MyLogWriter) {
 	allEnvs := append(wEnv, sEnv...)
 	allEnvs = append(allEnvs, GenEnvFromArgs(inputs)...)
 	needSplit := strings.Split(needs, ",")
@@ -221,6 +292,11 @@ func PrepareStage(wEnv []internaltypes.Env, sEnv []internaltypes.Env, inputs []i
 		result.Logs = append(result.Logs, fmt.Sprintf("[%s:%s] %s", stage, id, str))
 	}, color.FgWhite)
 
+	LwRed := logger.NewLogWriter(func(str string, color color.Attribute) {
+		logger.Custom(color, fmt.Sprintf("[%s:%s] %s", stage, id, str))
+		result.Logs = append(result.Logs, fmt.Sprintf("[%s:%s] %s", stage, id, str))
+	}, color.FgRed)
+
 	LwCrossed := log.New(logger.NewLogWriter(func(str string, col color.Attribute) {
 		colFuc := color.New(col).SprintFunc()
 		white := color.New(color.CrossedOut).SprintFunc()
@@ -228,15 +304,15 @@ func PrepareStage(wEnv []internaltypes.Env, sEnv []internaltypes.Env, inputs []i
 		result.Logs = append(result.Logs, fmt.Sprintf("[%s:%s] %s", stage, id, str))
 	}, color.BgYellow), "", 0)
 
-	return allEnvs, needSplit, LwWhite, LwCrossed
+	return allEnvs, needSplit, LwWhite, LwCrossed, LwRed
 }
 
-func Engine(cli *client.Client, ctx context.Context, w internaltypes.Workflow, sID string, vol types.Volume, dir string, allOutputs map[string][]internaltypes.Env, wg *sync.WaitGroup, skippedStages *[]string, results chan internaltypes.Result) {
+func Engine(cli *client.Client, ctx context.Context, w internaltypes.Workflow, sID string, allOutputs map[string][]internaltypes.Env, wg *sync.WaitGroup, skippedStages *[]string, results chan internaltypes.Result) {
 	defer wg.Done()
 	idx := slices.IndexFunc(w.Stages, func(c internaltypes.Stage) bool { return c.ID == sID })
 	stage := w.Stages[idx]
 	result := internaltypes.Result{Stage: stage}
-	volOutput, dirOutput := CreateVolume(cli, ctx, false)
+	volOutput, dirOutput := CreateVolume(cli, ctx)
 	outputPath := path.Join(dirOutput, "output")
 	_, err := os.Create(outputPath)
 	logger.HandleErr(err)
@@ -244,7 +320,7 @@ func Engine(cli *client.Client, ctx context.Context, w internaltypes.Workflow, s
 	defer RemoveVolume(volOutput.Name, ctx, cli)
 	defer os.RemoveAll(dirOutput)
 
-	allEnvs, needSplit, LwWhite, LwCrossed := PrepareStage(w.Env, stage.Env, w.Input, stage.Needs, allOutputs, stage.Stage, stage.ID, &result)
+	allEnvs, needSplit, LwWhite, LwCrossed, LwRed := PrepareStage(w.Env, stage.Env, w.Input, stage.Needs, allOutputs, stage.Stage, stage.ID, &result)
 	if !EvaluateCondition(stage.If, allEnvs, LwWhite) {
 		*skippedStages = append(*skippedStages, stage.ID)
 		result.Skipped = true
@@ -263,14 +339,9 @@ func Engine(cli *client.Client, ctx context.Context, w internaltypes.Workflow, s
 			result.Skipped = true
 			LwCrossed.Println("Stage Skipped due to needed stage skipped")
 		} else {
-			if stage.Clean {
-				volClean, dirClean := CreateVolume(cli, ctx, false)
-				success := RunStage(stage, ctx, cli, allEnvs, w.Image, volClean, dirClean, volOutput, dirOutput, LwWhite)
-				result.Result = success
-			} else {
-				success := RunStage(stage, ctx, cli, allEnvs, w.Image, vol, dir, volOutput, dirOutput, LwWhite)
-				result.Result = success
-			}
+			vol, dir := CreateVolume(cli, ctx)
+			success := RunStage(stage, ctx, cli, allEnvs, w.Image, vol, dir, volOutput, dirOutput, LwWhite, LwRed)
+			result.Result = success
 		}
 
 	}
@@ -282,16 +353,16 @@ func Engine(cli *client.Client, ctx context.Context, w internaltypes.Workflow, s
 	results <- result
 }
 
-func CreateVolume(cli *client.Client, ctx context.Context, mount bool) (vol types.Volume, dir string) {
+func CreateVolume(cli *client.Client, ctx context.Context) (vol types.Volume, dir string) {
 	dir, err := os.MkdirTemp("", "temp")
 	logger.HandleErr(err)
 
-	if mount {
-		wd, err := os.Getwd()
-		logger.HandleErr(err)
-		err2 := cp.Copy(wd, dir)
-		fmt.Println(err2) // nil
-	}
+	// if mount {
+	// 	wd, err := os.Getwd()
+	// 	logger.HandleErr(err)
+	// 	err2 := cp.Copy(wd, dir)
+	// 	fmt.Println(err2) // nil
+	// }
 
 	vol, err2 := cli.VolumeCreate(ctx, volume.VolumeCreateBody{
 		Driver: "local",
@@ -368,36 +439,14 @@ func ExtractArtifacts(path string, s internaltypes.Stage) {
 
 	for _, v := range s.Artifacts {
 		fullPath := filepath.Join(path, v)
-		fi, err := os.Stat(fullPath)
+		current, _ := os.Getwd()
+		to := filepath.Join(current, s.ID, v)
+		LwOperation.Println("Copying", v, "To", to)
+		err := Copy(fullPath, to)
 		if err != nil {
 			LwError.Println(err.Error())
-			return
-		}
-		current, _ := os.Getwd()
-		to := filepath.Join(current, v)
-		LwOperation.Println("Copying", v, "To", to)
-
-		switch mode := fi.Mode(); {
-		case mode.IsDir():
-			// do directory stuff
-			err = cp.Copy(fullPath, to)
-			if err != nil {
-				LwError.Println(err.Error())
-			} else {
-				LwSuccess.Println("Copied", v, "To", to)
-			}
-		case mode.IsRegular():
-			// do file stuff
-			// Read all content of src to data
-			data, _ := ioutil.ReadFile(fullPath)
-			// Write data to dst
-			err = ioutil.WriteFile(to, data, 0o644)
-			if err != nil {
-				LwError.Println(err.Error())
-			} else {
-				LwSuccess.Println("Copied", v, "To", to)
-			}
-
+		} else {
+			LwSuccess.Println("Copied", v, "To", to)
 		}
 	}
 }

@@ -17,7 +17,6 @@ import (
 
 	_ "unsafe"
 
-	"github.com/fatih/color"
 	"github.com/google/uuid"
 	"github.com/jatalocks/opsilon/internal/engine"
 	"github.com/jatalocks/opsilon/internal/internaltypes"
@@ -53,7 +52,7 @@ type ResponseBody struct {
 	Output   string `json:"output"`
 }
 
-func (c *Client) CreateVolume(ctx context.Context, mount bool) (string, *v1.PersistentVolumeClaim) {
+func (c *Client) CreateVolume(ctx context.Context) (string, *v1.PersistentVolumeClaim) {
 	volume, errGo := uuid.NewRandom()
 	logger.HandleErr(errGo)
 	volumeName := volume.String()
@@ -85,60 +84,60 @@ func (c *Client) CreateVolume(ctx context.Context, mount bool) (string, *v1.Pers
 	claim, errGo := api.PersistentVolumeClaims(c.ns).Create(ctx, createOpts, metav1.CreateOptions{})
 	logger.HandleErr(errGo)
 
-	if mount {
-		wd, err := os.Getwd()
-		logger.HandleErr(err)
+	// if mount {
+	// 	wd, err := os.Getwd()
+	// 	logger.HandleErr(err)
 
-		VolumeMounts := []v1.VolumeMount{{Name: volumeName, MountPath: "/app"}}
-		Volumes := []v1.Volume{{
-			Name:         volumeName,
-			VolumeSource: v1.VolumeSource{PersistentVolumeClaim: &v1.PersistentVolumeClaimVolumeSource{ClaimName: claim.Name}},
-		}}
+	// 	VolumeMounts := []v1.VolumeMount{{Name: volumeName, MountPath: "/app"}}
+	// 	Volumes := []v1.Volume{{
+	// 		Name:         volumeName,
+	// 		VolumeSource: v1.VolumeSource{PersistentVolumeClaim: &v1.PersistentVolumeClaimVolumeSource{ClaimName: claim.Name}},
+	// 	}}
 
-		string_uuid := (uuid.New()).String()
+	// 	string_uuid := (uuid.New()).String()
 
-		pod := &v1.Pod{
-			ObjectMeta: metav1.ObjectMeta{Name: string_uuid},
-			Spec: v1.PodSpec{
-				RestartPolicy: v1.RestartPolicyNever,
-				Volumes:       Volumes,
-				Containers: []v1.Container{
-					v1.Container{
-						Name:         "keepalive",
-						Image:        "busybox",
-						Command:      []string{"/bin/sh"},
-						Args:         []string{"-c", fmt.Sprintf("until ((ls /%s)); do echo sleeping; sleep 2; done;cp -r /%s/. ./;find / -path '*/%s/*' -delete;rm -rf /app/lost+found", path.Base(wd), path.Base(wd), path.Base(wd))},
-						WorkingDir:   "/app",
-						VolumeMounts: VolumeMounts,
-					},
-				},
-			},
-		}
+	// 	pod := &v1.Pod{
+	// 		ObjectMeta: metav1.ObjectMeta{Name: string_uuid},
+	// 		Spec: v1.PodSpec{
+	// 			RestartPolicy: v1.RestartPolicyNever,
+	// 			Volumes:       Volumes,
+	// 			Containers: []v1.Container{
+	// 				v1.Container{
+	// 					Name:         "keepalive",
+	// 					Image:        "busybox",
+	// 					Command:      []string{"/bin/sh"},
+	// 					Args:         []string{"-c", fmt.Sprintf("until ((ls /%s)); do echo sleeping; sleep 2; done;cp -r /%s/. ./;find / -path '*/%s/*' -delete;rm -rf /app/lost+found", path.Base(wd), path.Base(wd), path.Base(wd))},
+	// 					WorkingDir:   "/app",
+	// 					VolumeMounts: VolumeMounts,
+	// 				},
+	// 			},
+	// 		},
+	// 	}
 
-		defer func() {
-			recover()
-			if err := c.DeletePod(ctx, string_uuid); err != nil {
-				log.Printf("Error deleting pod: %v", err)
-			}
-		}()
+	// 	defer func() {
+	// 		recover()
+	// 		if err := c.DeletePod(ctx, string_uuid); err != nil {
+	// 			log.Printf("Error deleting pod: %v", err)
+	// 		}
+	// 	}()
 
-		_, err = c.k8s.CoreV1().
-			Pods(c.ns).
-			Create(ctx, pod, metav1.CreateOptions{})
-		logger.HandleErr(err)
-		LwWhite := logger.NewLogWriter(func(str string, color color.Attribute) {
-			logger.Custom(color, fmt.Sprintf("[%s] %s", "Mounting working directory to volume", str))
-		}, color.FgWhite)
+	// 	_, err = c.k8s.CoreV1().
+	// 		Pods(c.ns).
+	// 		Create(ctx, pod, metav1.CreateOptions{})
+	// 	logger.HandleErr(err)
+	// 	LwWhite := logger.NewLogWriter(func(str string, color color.Attribute) {
+	// 		logger.Custom(color, fmt.Sprintf("[%s] %s", "Mounting working directory to volume", str))
+	// 	}, color.FgWhite)
 
-		err = c.waitPod(ctx, string_uuid, LwWhite, "Terminated") // terminated == running in this case. because mounter does not have init containers.
-		logger.HandleErr(err)
+	// 	err = c.waitPod(ctx, string_uuid, LwWhite, "Terminated") // terminated == running in this case. because mounter does not have init containers.
+	// 	logger.HandleErr(err)
 
-		copyToPod(c, wd, "/", string_uuid, ctx)
+	// 	copyToPod(c, wd, "/", string_uuid, ctx)
 
-		err = c.waitPod(ctx, string_uuid, LwWhite, "Mounted")
-		logger.HandleErr(err)
+	// 	err = c.waitPod(ctx, string_uuid, LwWhite, "Mounted")
+	// 	logger.HandleErr(err)
 
-	}
+	// }
 
 	return volumeName, claim
 }
@@ -156,26 +155,33 @@ func (c *Client) RemoveVolume(ctx context.Context, vol string, claim *v1.Persist
 	// fmt.Println(err)
 }
 
-func (c *Client) CreatePod(ctx context.Context, name string, image string, command []string, envs []internaltypes.Env, volume string, claim *v1.PersistentVolumeClaim) (error, v1.Pod) {
+// func (c *Client) CreatePod(ctx context.Context, name string, image string, command []string, envs []internaltypes.Env, volume string, claim *v1.PersistentVolumeClaim) (error, v1.Pod) {
+func (c *Client) CreatePod(ctx context.Context, name string, image string, s internaltypes.Stage, envs []internaltypes.Env) (error, v1.Pod) {
 	envVar := ToV1Env(envs)
 	VolumeMounts := []v1.VolumeMount{{Name: "emptyoutput", MountPath: "/output"}}
 	Volumes := []v1.Volume{{
 		Name:         "emptyoutput",
 		VolumeSource: v1.VolumeSource{EmptyDir: &v1.EmptyDirVolumeSource{Medium: v1.StorageMediumMemory}},
 	}}
-	if volume != "" {
-		VolumeMounts = append(VolumeMounts, v1.VolumeMount{Name: volume, MountPath: "/app"})
-		Volumes = append(Volumes, v1.Volume{
-			Name:         volume,
-			VolumeSource: v1.VolumeSource{PersistentVolumeClaim: &v1.PersistentVolumeClaimVolumeSource{ClaimName: claim.Name}},
-		})
-	} else {
-		VolumeMounts = append(VolumeMounts, v1.VolumeMount{Name: "emptydir", MountPath: "/app"})
-		Volumes = append(Volumes, v1.Volume{
-			Name:         "emptydir",
-			VolumeSource: v1.VolumeSource{EmptyDir: &v1.EmptyDirVolumeSource{Medium: v1.StorageMediumMemory}},
-		})
-	}
+	// if volume != "" {
+	// 	VolumeMounts = append(VolumeMounts, v1.VolumeMount{Name: volume, MountPath: "/app"})
+	// 	Volumes = append(Volumes, v1.Volume{
+	// 		Name:         volume,
+	// 		VolumeSource: v1.VolumeSource{PersistentVolumeClaim: &v1.PersistentVolumeClaimVolumeSource{ClaimName: claim.Name}},
+	// 	})
+	// } else {
+	mountApp := os.TempDir()
+	defer os.RemoveAll(mountApp)
+	engine.LoadImportsIntoStage(s, mountApp)
+
+	VolumeMounts = append(VolumeMounts, v1.VolumeMount{Name: "emptydir", MountPath: "/app"})
+	Volumes = append(Volumes, v1.Volume{
+		Name: "emptydir",
+		VolumeSource: v1.VolumeSource{HostPath: &v1.HostPathVolumeSource{
+			Path: mountApp,
+		}},
+	})
+	// }
 
 	// if volumeOutput != "" {
 	// 	VolumeMounts = append(VolumeMounts, v1.VolumeMount{Name: volumeOutput, MountPath: "/output"})
@@ -193,7 +199,7 @@ func (c *Client) CreatePod(ctx context.Context, name string, image string, comma
 				v1.Container{
 					Name:         "main",
 					Image:        image,
-					Command:      command,
+					Command:      s.Script,
 					WorkingDir:   "/app",
 					Env:          *envVar,
 					VolumeMounts: VolumeMounts,
@@ -303,15 +309,15 @@ func toPodName(stage internaltypes.Stage) string {
 	return fmt.Sprint(strings.ReplaceAll(clearString(fmt.Sprint(stage.Stage+"-"+stage.ID)), " ", "-") + "-" + (uuid.New()).String())
 }
 
-func (cli *Client) KubeEngine(wg *sync.WaitGroup, sID string, ctx context.Context, w internaltypes.Workflow, vol string, claim *v1.PersistentVolumeClaim, allOutputs map[string][]internaltypes.Env, skippedStages *[]string, results chan internaltypes.Result) {
+// func (cli *Client) KubeEngine(wg *sync.WaitGroup, sID string, ctx context.Context, w internaltypes.Workflow, vol string, claim *v1.PersistentVolumeClaim, allOutputs map[string][]internaltypes.Env, skippedStages *[]string, results chan internaltypes.Result) {
+func (cli *Client) KubeEngine(wg *sync.WaitGroup, sID string, ctx context.Context, w internaltypes.Workflow, allOutputs map[string][]internaltypes.Env, skippedStages *[]string, results chan internaltypes.Result) {
 	defer wg.Done()
 	idx := slices.IndexFunc(w.Stages, func(c internaltypes.Stage) bool { return c.ID == sID })
 	stage := w.Stages[idx]
 	result := internaltypes.Result{Stage: stage}
 	// volOutput, claimOutput := cli.CreateVolume(ctx, false)
 	// defer cli.RemoveVolume(ctx, volOutput, claimOutput)
-
-	allEnvs, needSplit, LwWhite, LwCrossed := engine.PrepareStage(w.Env, stage.Env, w.Input, stage.Needs, allOutputs, stage.Stage, stage.ID, &result)
+	allEnvs, needSplit, LwWhite, LwCrossed, LwRed := engine.PrepareStage(w.Env, stage.Env, w.Input, stage.Needs, allOutputs, stage.Stage, stage.ID, &result)
 
 	if !engine.EvaluateCondition(stage.If, allEnvs, LwWhite) {
 		*skippedStages = append(*skippedStages, stage.ID)
@@ -331,15 +337,16 @@ func (cli *Client) KubeEngine(wg *sync.WaitGroup, sID string, ctx context.Contex
 			result.Skipped = true
 			LwCrossed.Println("Stage Skipped due to needed stage skipped")
 		} else {
-			if stage.Clean {
-				// volClean, claimClean := cli.CreateVolume(ctx, false)
-				success := cli.RunStageKubernetes(stage, ctx, allEnvs, w.Image, "", nil, LwWhite, &result, allOutputs)
-				result.Result = success
-				// defer cli.RemoveVolume(ctx, volClean, claimClean)
-			} else {
-				success := cli.RunStageKubernetes(stage, ctx, allEnvs, w.Image, vol, claim, LwWhite, &result, allOutputs)
-				result.Result = success
-			}
+			// if stage.Clean {
+			// 	// volClean, claimClean := cli.CreateVolume(ctx, false)
+			// 	success := cli.RunStageKubernetes(stage, ctx, allEnvs, w.Image, "", nil, LwWhite, &result, allOutputs, LwRed)
+			// 	result.Result = success
+			// 	// defer cli.RemoveVolume(ctx, volClean, claimClean)
+			// } else {
+			// 	success := cli.RunStageKubernetes(stage, ctx, allEnvs, w.Image, vol, claim, LwWhite, &result, allOutputs, LwRed)
+			// 	result.Result = success
+			// }
+			cli.RunStageKubernetes(stage, ctx, allEnvs, w.Image, LwWhite, &result, allOutputs, LwRed)
 		}
 
 	}
@@ -451,7 +458,8 @@ func (c *Client) getPodLogs(ctx context.Context, podName string, LwWhite *logger
 	return nil
 }
 
-func (cli *Client) RunStageKubernetes(s internaltypes.Stage, ctx context.Context, envs []internaltypes.Env, globalImage string, volume string, claim *v1.PersistentVolumeClaim, LwWhite *logger.MyLogWriter, result *internaltypes.Result, allOutputs map[string][]internaltypes.Env) bool {
+// func (cli *Client) RunStageKubernetes(s internaltypes.Stage, ctx context.Context, envs []internaltypes.Env, globalImage string, volume string, claim *v1.PersistentVolumeClaim, LwWhite *logger.MyLogWriter, result *internaltypes.Result, allOutputs map[string][]internaltypes.Env, LwRed *logger.MyLogWriter) bool {
+func (cli *Client) RunStageKubernetes(s internaltypes.Stage, ctx context.Context, envs []internaltypes.Env, globalImage string, LwWhite *logger.MyLogWriter, result *internaltypes.Result, allOutputs map[string][]internaltypes.Env, LwRed *logger.MyLogWriter) {
 	LwWhite.Write([]byte(fmt.Sprintf("Running Stage with the following variables: %s\n", engine.GenEnv(envs))))
 	envs = append(envs, []internaltypes.Env{{Name: "OUTPUT", Value: "/output/output"}}...)
 	if s.Image != "" {
@@ -463,21 +471,29 @@ func (cli *Client) RunStageKubernetes(s internaltypes.Stage, ctx context.Context
 		ctx,
 		podName,
 		globalImage,
-		s.Script,
+		s,
 		envs,
-		volume,
-		claim,
+		// volume,
+		// claim,
 	)
-	logger.HandleErr(err)
+	if err != nil {
+		logger.Error(err.Error())
+	}
 
 	err = cli.getPodLogs(ctx, podName, LwWhite)
-	logger.HandleErr(err)
+	if err != nil {
+		logger.Error(err.Error())
+	}
 
 	err = cli.waitPod(ctx, podName, LwWhite, "Terminated")
-	logger.HandleErr(err)
+	if err != nil {
+		logger.Error(err.Error())
+	}
 
 	dirArt, err := os.MkdirTemp("", "artifacts")
-	logger.HandleErr(err)
+	if err != nil {
+		logger.Error(err.Error())
+	}
 	// defer os.RemoveAll(dirArt)
 
 	// err = cli.waitPod(ctx, podName, LwWhite, v1.PodRunning)
@@ -485,7 +501,9 @@ func (cli *Client) RunStageKubernetes(s internaltypes.Stage, ctx context.Context
 
 	if len(s.Artifacts) > 0 {
 		err = copyFromPod(cli, "/app", dirArt, podName)
-		logger.HandleErr(err)
+		if err != nil {
+			logger.Error(err.Error())
+		}
 		engine.ExtractArtifacts(path.Join(dirArt, "app"), s)
 	}
 	err = copyFromPod(cli, "/output", dirArt, podName)
@@ -502,17 +520,16 @@ func (cli *Client) RunStageKubernetes(s internaltypes.Stage, ctx context.Context
 	// err = cli.waitPod(ctx, podName, LwWhite, v1.PodRunning)
 	// logger.HandleErr(err)
 
-	recover()
-
 	exitCode, err := cli.GetPodExitCode(ctx, podName)
-	logger.HandleErr(err)
+	if err != nil {
+		logger.Error(err.Error())
+	}
 
 	if err := cli.DeletePod(ctx, podName); err != nil {
 		log.Printf("Error deleting pod: %v", err)
 	}
 
-	return exitCode == 0
-
+	result.Result = (exitCode == 0)
 	// logger.Info(fmt.Sprint(exitCode))
 }
 func getPrefix(file string) string {

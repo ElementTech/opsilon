@@ -47,18 +47,18 @@ func init() {
 
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.opsilon.yaml)")
 	rootCmd.PersistentFlags().Bool("kubernetes", false, "Run in Kubernetes instead of Docker. You must be connected to a Kubernetes Context")
-	viper.BindPFlag("kubernetes", rootCmd.Flags().Lookup("kubernetes"))
+
 	rootCmd.PersistentFlags().Bool("local", true, "Run using a local file as config. Not a database. True for CLI.")
-	viper.BindPFlag("local", rootCmd.Flags().Lookup("local"))
+
 	rootCmd.PersistentFlags().Bool("database", false, "Run using a MongoDB database.")
-	viper.BindPFlag("database", rootCmd.Flags().Lookup("database"))
+
 	rootCmd.PersistentFlags().Bool("consul", false, "Run using a Consul Key/Value store. This is for distributed installation.")
-	viper.BindPFlag("consul", rootCmd.Flags().Lookup("consul"))
+
 	rootCmd.MarkFlagsMutuallyExclusive("local", "database")
 	rootCmd.PersistentFlags().String("mongodb_uri", "mongodb://mongodb:27017", "Mongodb URI. Can be set using ENV variable.")
-	viper.BindPFlag("mongodb_uri", rootCmd.Flags().Lookup("mongodb_uri"))
+
 	rootCmd.PersistentFlags().String("consul_uri", "localhost:8500", "Consul URI. Can be set using ENV variable.")
-	viper.BindPFlag("consul_uri", rootCmd.Flags().Lookup("consul_uri"))
+
 	rootCmd.PersistentFlags().String("consul_key", "default", "Consul Config Key. Can be set using ENV variable.")
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.
@@ -113,6 +113,13 @@ func initConfig() {
 		// If a config file is found, read it in.
 		err = viper.ReadInConfig()
 	}
+
+	viper.BindPFlag("kubernetes", rootCmd.Flags().Lookup("kubernetes"))
+	viper.BindPFlag("local", rootCmd.Flags().Lookup("local"))
+	viper.BindPFlag("database", rootCmd.Flags().Lookup("database"))
+	viper.BindPFlag("consul", rootCmd.Flags().Lookup("consul"))
+	viper.BindPFlag("mongodb_uri", rootCmd.Flags().Lookup("mongodb_uri"))
+	viper.BindPFlag("consul_uri", rootCmd.Flags().Lookup("consul_uri"))
 
 	if err != nil {
 		logger.Error("It seems that you don't yet have a repository config file. Please run:")
