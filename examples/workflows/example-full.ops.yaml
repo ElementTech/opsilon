@@ -21,8 +21,6 @@ input:
   - name: arg3
     optional: true # If skipped in the CLI input phase, will default to an empty string [($arg3 == "") == true]
 
-mount: true # If true, will mount a copy of the working directory as the volume of the stages
-
 # Stages Rules
 # 1. All stages will run in parallel unless they have a "needs" field
 stages:
@@ -40,36 +38,47 @@ stages:
       - -c
       - |
         echo "Starting Stage"
-        ls -l
         echo "exportedArg=i_am_an_output" >> $OUTPUT
-        ls -l $OUTPUT
         cat $OUTPUT
         mkdir testdir1
-        echo $arg3 >> testdir1/test.txt
+        cd testdir1
+        echo $arg3 > test.txt
         echo "Stage Ended"
+        cd ..
+        echo $arg3 > test.txt
+        ls -l
     artifacts: # Will be saved to the Working Directory where opsilon CLI was run from.
       - testdir1
-      - test.txt # Will not exist, the runner will ignore this and print a warning.
+      - test.txt
   - stage: write a file
     id: writefile2
     needs: writefile # Will get the outputs of the stage with this ID. Comma Separated list of stage IDs
-    clean: true # Enabling this will make this stage will not share a filesystem with the other stages. It will start with a clean /app as working directory.
+    import:
+      - from: writefile
+        artifacts:
+          - testdir1
     if: $exportedArg == "wrong_output" # Run only if the output of the step it needs is equal this string.
     script:
       - sh
       - -c
       - |
+        ls -l
         mkdir testdir2
         echo "I am another stage"
         echo $exportedArg >> testdir2/test.txt
         ls -l
     artifacts:
       - testdir2 # Copies files inside it.
+      - testdir1 # Copies files inside it.
       - testdir2/test.txt # It has no effect to copy file twice.
   - stage: write a file
     id: writefile3
     needs: writefile # Will get the outputs of the stage with this ID. Comma Separated list of stage IDs
-    clean: false # Enabling this will make this stage will not share a filesystem with the other stages. It will start with a clean /app as working directory.
+    import:
+      - from: writefile
+        artifacts:
+          - testdir1
+          - test.txt
     if: $exportedArg == "i_am_an_output" # Run only if the output of the step it needs is equal this string.
     script:
       - sh
@@ -78,7 +87,7 @@ stages:
         mkdir testdir3
         echo "I am another stage"
         echo $exportedArg >> testdir3/test.txt
-        ls -l
+        ls -l -a
     artifacts:
       - testdir3 # Copies files inside it.
   - stage: read the file

@@ -1,11 +1,13 @@
 package internaltypes
 
 type Result struct {
-	Stage   Stage
-	Result  bool
-	Skipped bool
-	Outputs []Env
-	Logs    []string
+	_id      string
+	Workflow string
+	Stage    Stage
+	Result   bool
+	Skipped  bool
+	Outputs  []Env
+	Logs     []string
 }
 
 type Input struct {
@@ -24,6 +26,12 @@ type Stage struct {
 	Artifacts []string `mapstructure:"artifacts,omitempty"`
 	Image     string   `mapstructure:"image,omitempty"`
 	Needs     string   `mapstructure:"needs,omitempty" validate:"nowhitespace"`
+	Import    []Import `mapstructure:"import,omitempty"`
+}
+
+type Import struct {
+	From      string   `mapstructure:"from" validate:"nonzero,nowhitespace"`
+	Artifacts []string `mapstructure:"artifacts" validate:"nonzero"`
 }
 
 type Env struct {
@@ -32,14 +40,15 @@ type Env struct {
 }
 
 type Workflow struct {
+	_id         string
 	ID          string  `mapstructure:"id" validate:"nonzero,nowhitespace"`
 	Image       string  `mapstructure:"image" validate:"nonzero,nowhitespace"`
 	Description string  `mapstructure:"description"`
 	Env         []Env   `mapstructure:"env"`
 	Input       []Input `mapstructure:"input"`
-	Mount       bool    `mapstructure:"mount"`
-	Stages      []Stage `mapstructure:"stages" validate:"nonzero"`
-	Repo        string  `mapstructure:"repository,omitempty"` // To be filled automatically. Not part of YAML.
+	// Mount       bool    `mapstructure:"mount"`
+	Stages []Stage `mapstructure:"stages" validate:"nonzero"`
+	Repo   string  `mapstructure:"repository,omitempty"` // To be filled automatically. Not part of YAML.
 }
 
 type WorkflowArgument struct {

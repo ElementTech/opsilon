@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/hashicorp/consul/api"
 	"github.com/jatalocks/opsilon/internal/engine"
 	"github.com/jatalocks/opsilon/internal/internaltypes"
 	"github.com/jatalocks/opsilon/internal/logger"
@@ -64,6 +65,9 @@ func PrintStageResults(results []internaltypes.Result) {
 	var data [][]string
 
 	for _, r := range results {
+		// for _, v := range r.Logs {
+		// 	fmt.Println(r.Stage.ID, v)
+		// }
 		row := []string{r.Stage.Stage, r.Stage.ID, fmt.Sprint(r.Result), fmt.Sprint(r.Skipped), fmt.Sprint(engine.GenEnv(r.Outputs)), fmt.Sprint(len(r.Logs))}
 		data = append(data, row)
 	}
@@ -134,17 +138,33 @@ func GetConfigFile() *RepoFile {
 }
 
 func SaveToConfig(r RepoFile) {
-	file, err := os.OpenFile(viper.ConfigFileUsed(), os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0o600)
-	if err != nil {
-		log.Fatalf("error opening/creating file: %v", err)
-	}
-	defer file.Close()
+	if viper.GetBool("consul") {
+		client, err := api.NewClient(api.DefaultConfig())
+		if err != nil {
+			panic(err)
+		}
 
-	enc := yaml.NewEncoder(file)
+		// Get a handle to the KV API
+		kv := client.KV()
+		out, err := yaml.Marshal(r)
+		logger.HandleErr(err)
+		// PUT a new KV pair
+		p := &api.KVPair{Key: "OPSILON", Value: out}
+		_, err = kv.Put(p, nil)
+		logger.HandleErr(err)
+	} else {
+		file, err := os.OpenFile(viper.ConfigFileUsed(), os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0o600)
+		if err != nil {
+			log.Fatalf("error opening/creating file: %v", err)
+		}
+		defer file.Close()
 
-	err = enc.Encode(r)
-	if err != nil {
-		log.Fatalf("error encoding: %v", err)
+		enc := yaml.NewEncoder(file)
+
+		err = enc.Encode(r)
+		if err != nil {
+			log.Fatalf("error encoding: %v", err)
+		}
 	}
 }
 

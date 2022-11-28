@@ -101,25 +101,34 @@ func Add(name string, desc string, rtype string, path string, branch string, sub
 }
 
 func InsertRepositoryIfValid(repo config.Repo) error {
+	fileConfig := config.GetConfigFile()
 	err := validate.ValidateRepo(&repo)
 	if err != nil {
 		return err
 	}
-	fileConfig := config.GetConfigFile()
 	fileConfig.Repositories = append(fileConfig.Repositories, repo)
 	err = validate.ValidateRepoFile(fileConfig)
 	if err != nil {
 		return err
 	}
 	viper.Set("", fileConfig)
-	err = viper.WriteConfig()
-	if err != nil {
-		return err
+	if !viper.GetBool("consul") {
+		err = viper.WriteConfigAs(viper.ConfigFileUsed())
+		if err != nil {
+			return err
+		}
 	}
 	config.SaveToConfig(*fileConfig)
-	err = viper.ReadInConfig()
-	if err != nil {
-		return err
+	if !viper.GetBool("consul") {
+		err := viper.ReadInConfig()
+		if err != nil {
+			return err
+		}
+	} else {
+		err := viper.ReadRemoteConfig()
+		if err != nil {
+			return err
+		}
 	}
 	_, err = get.GetWorkflowsForRepo([]string{repo.Name})
 	if err != nil {
