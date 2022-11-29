@@ -1,5 +1,10 @@
 package internaltypes
 
+import (
+	"github.com/shomali11/slacker"
+	"github.com/slack-go/slack"
+)
+
 type Result struct {
 	_id      string
 	Workflow string
@@ -55,4 +60,9 @@ type WorkflowArgument struct {
 	Repo     string            `json:"repo" xml:"repo" form:"repo" query:"repo" mapstructure:"repo" validate:"nonzero"`
 	Workflow string            `json:"workflow" xml:"workflow" form:"workflow" query:"workflow" mapstructure:"workflow" validate:"nonzero"`
 	Args     map[string]string `json:"args" xml:"args" form:"args" query:"args" mapstructure:"args" validate:"nonzero"`
+}
+
+type SlackMesseger struct {
+	Callback *slack.InteractionCallback
+	Slacker  *slacker.Slacker
 }

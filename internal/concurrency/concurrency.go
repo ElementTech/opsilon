@@ -18,6 +18,7 @@ import (
 	"github.com/kendru/darwin/go/depgraph"
 	"github.com/labstack/echo/v4"
 	"github.com/mitchellh/hashstructure/v2"
+	"github.com/slack-go/slack"
 	"github.com/spf13/viper"
 	"go.mongodb.org/mongo-driver/bson"
 )
@@ -46,7 +47,7 @@ func runStageGroupKubernetes(cli *kubengine.Client, wg *sync.WaitGroup, stageIDs
 	}
 }
 
-func ToGraph(w internaltypes.Workflow, c echo.Context) {
+func ToGraph(w internaltypes.Workflow, c echo.Context, slacker internaltypes.SlackMesseger) {
 	skippedStages := make([]string, 0)
 	ctx := context.Background()
 	k8s := viper.GetBool("kubernetes")
@@ -73,7 +74,7 @@ func ToGraph(w internaltypes.Workflow, c echo.Context) {
 			if (len(layer) > 0) && (layer[0] != "") {
 				fmt.Printf("Running in Parallel: %s\n", strings.Join(layer, ", "))
 				wg.Add(len(layer))
-				go processResults(&results, &resultsArray, c, w)
+				go processResults(&results, &resultsArray, c, w, slacker)
 				go runStageGroupDocker(wg, layer, cli, ctx, w, allOutputs, &skippedStages, results)
 				wg.Wait()
 			}
@@ -93,7 +94,7 @@ func ToGraph(w internaltypes.Workflow, c echo.Context) {
 				fmt.Printf("Running in Parallel: %s\n", strings.Join(layer, ", "))
 				wg.Add(len(layer))
 
-				go processResults(&results, &resultsArray, c, w)
+				go processResults(&results, &resultsArray, c, w, slacker)
 				// go runStageGroupKubernetes(cli, wg, layer, ctx, w, vol, claim, allOutputs, &skippedStages, results)
 				go runStageGroupKubernetes(cli, wg, layer, ctx, w, allOutputs, &skippedStages, results)
 				wg.Wait()
@@ -103,9 +104,20 @@ func ToGraph(w internaltypes.Workflow, c echo.Context) {
 		time.Sleep(1 * time.Second)
 	}
 	config.PrintStageResults(resultsArray)
+	if slacker.Callback != nil {
+		var logs []string
+		for _, r := range resultsArray {
+			logs = append(logs, r.Logs...)
+		}
+		slacker.Slacker.Client().PostMessage(slacker.Callback.Channel.ID, slack.MsgOptionText("Uploading file ...", false))
+		_, err := slacker.Slacker.Client().UploadFile(slack.FileUploadParameters{Content: strings.Join(logs, "\n"), Channels: []string{slacker.Callback.Channel.ID}})
+		if err != nil {
+			fmt.Printf("Error encountered when uploading file: %+v\n", err)
+		}
+	}
 }
 
-func processResults(results *chan internaltypes.Result, resultsArray *[]internaltypes.Result, c echo.Context, w internaltypes.Workflow) {
+func processResults(results *chan internaltypes.Result, resultsArray *[]internaltypes.Result, c echo.Context, w internaltypes.Workflow, slacker internaltypes.SlackMesseger) {
 	for str := range *results {
 		*resultsArray = append(*resultsArray, str)
 		hash, err := hashstructure.Hash(w, hashstructure.FormatV2, nil)
@@ -120,16 +132,24 @@ func processResults(results *chan internaltypes.Result, resultsArray *[]internal
 		}()
 		if str.Result {
 			logger.Success("Stage", str.Stage.ID, "Success")
+			if slacker.Callback != nil {
+				streamResultToSlackContext(slacker, fmt.Sprint(":white_check_mark: Stage ", str.Stage.ID, " Success"))
+			}
 		} else {
 			if str.Skipped {
 				logger.Operation("Stage", str.Stage.ID, "Skipped")
+				streamResultToSlackContext(slacker, fmt.Sprint(":ballot_box_with_check: Stage ", str.Stage.ID, " Skipped"))
 			} else {
 				logger.Error("Stage", str.Stage.ID, "Failed")
+				streamResultToSlackContext(slacker, fmt.Sprint(":heavy_multiplication_x: Stage ", str.Stage.ID, " Failed"))
 			}
 		}
 		if c != nil {
 			streamResultToEchoContext(c, str)
 		}
+		// if slacker.Callback != nil {
+		// 	streamResultToSlackContext(slacker, str)
+		// }
 	}
 }
 
@@ -141,4 +161,10 @@ func streamResultToEchoContext(c echo.Context, result internaltypes.Result) erro
 	c.Response().Flush()
 	// time.Sleep(1 * time.Second)
 	return nil
+}
+
+func streamResultToSlackContext(slacker internaltypes.SlackMesseger, str string) error {
+	_, _, err := slacker.Slacker.Client().PostMessage(slacker.Callback.Channel.ID, slack.MsgOptionText(str, false),
+		slack.MsgOptionReplaceOriginal(slacker.Callback.ResponseURL))
+	return err
 }

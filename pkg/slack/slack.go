@@ -176,7 +176,7 @@ var interactive = func(s *slacker.Slacker, event *socketmode.Event, callback *sl
 				slack.MsgOptionReplaceOriginal(callback.ResponseURL))
 		}
 
-		concurrency.ToGraph(chosenAct, nil)
+		concurrency.ToGraph(chosenAct, nil, internaltypes.SlackMesseger{Callback: callback, Slacker: s})
 
 	case slack.InteractionTypeBlockActions:
 		if len(callback.ActionCallback.BlockActions) != 1 {
