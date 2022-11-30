@@ -203,7 +203,7 @@ func wrun(c echo.Context) error {
 	c.Response().Header().Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
 	c.Response().WriteHeader(http.StatusOK)
 
-	concurrency.ToGraph(chosenAct, c)
+	concurrency.ToGraph(chosenAct, c, internaltypes.SlackMesseger{})
 
 	return nil
 }

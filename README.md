@@ -46,6 +46,7 @@ $ mv opsilon /usr/local/bin/opsilon # or /usr/bin/opsilon
 ```
 ## Usage
 Make sure you have Docker installed on your computer (or connected to a kubernetes cluster `--kubernetes`).
+
  **EITHER**
 1. Connect to the examples folder present in this repository
 ```sh
@@ -69,11 +70,30 @@ $ opsilon server -p 8080 # See extra flags below
 ```sh
 $ Go to http://localhost:8080/api/v1/docs
 ```
+ **OR**
+1. Start the slack server
+```sh
+$ export SLACK_BOT_TOKEN=xoxb-123
+$ export SLACK_APP_TOKEN=xapp-123
+$ opsilon slack # See extra flags below
+```
+2. Install the app from the manifest in [Manifest](/assets/manifest.yaml)
+3. Go to the Opsilon app in your slack
+```sh
+$ help
+
+list repos - List Available Workflows
+  Example: list
+  Example: list myteam
+  Example: list examples,myteam
+run
+```
+
 ### Extra Flags
 `--kubernetes` - (kubernetes instead of docker)
 ___
 
-**`--server` will usually come with:**
+**`server` or `slack` will usually come with:**
 
 `--consul`  - Enable a consul server as a configuration endpoint. Allows for a distributed remote configuration of workflows and repositories instead of a local file.
    - `--consul_uri` = `localhost:8500` by default
@@ -97,17 +117,25 @@ Available Commands:
   repo        Operate on workflow repositories
   run         Run an available workflow
   server      Runs an api server that functions the same as the CLI
+  slack       Runs opsilon as a socket-mode slack bot
   version     Displays opsilon version
 
 Flags:
-      --config string   config file (default is $HOME/.opsilon.yaml)
-  -h, --help            help for opsilon
+      --config string        config file (default is $HOME/.opsilon.yaml)
+      --consul               Run using a Consul Key/Value store. This is for distributed installation.
+      --consul_key string    Consul Config Key. Can be set using ENV variable. (default "default")
+      --consul_uri string    Consul URI. Can be set using ENV variable. (default "localhost:8500")
+      --database             Run using a MongoDB database.
+  -h, --help                 help for opsilon
+      --kubernetes           Run in Kubernetes instead of Docker. You must be connected to a Kubernetes Context
+      --local                Run using a local file as config. Not a database. True for CLI. (default true)
+      --mongodb_uri string   Mongodb URI. Can be set using ENV variable. (default "mongodb://localhost:27017")
 
 Use "opsilon [command] --help" for more information about a command.
 ```
 
 # Contribution
-I would always welcome an issue or a PR! Every contribution is welcome. Below is some information to help you get started.
+Every contribution is welcome. Below is some information to help you get started.
 
 ### Development Features
 - [goreleaser](https://goreleaser.com/) with `deb.` and `.rpm` package releasing

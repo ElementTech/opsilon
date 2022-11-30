@@ -14,12 +14,6 @@ var port int64
 var serverCmd = &cobra.Command{
 	Use:   "server",
 	Short: "Runs an api server that functions the same as the CLI",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
-
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		initConfig()
 		web.App(port, ver)
