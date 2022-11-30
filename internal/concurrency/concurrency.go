@@ -134,6 +134,7 @@ func ToGraph(w internaltypes.Workflow, c echo.Context, slacker internaltypes.Sla
 			} else {
 				fmt.Printf("Trying to upload %v", v)
 				if fileInfo.IsDir() {
+					defer os.Remove(v + ".zip")
 					if err := zipSource(v, v+".zip"); err != nil {
 						fmt.Printf("Error encountered when zipping artifact: %+v\n", err)
 					}
@@ -142,6 +143,7 @@ func ToGraph(w internaltypes.Workflow, c echo.Context, slacker internaltypes.Sla
 						fmt.Printf("Error encountered when uploading artifact: %+v\n", err)
 					}
 				} else {
+					defer os.Remove(v)
 					_, err := slacker.Slacker.Client().UploadFile(slack.FileUploadParameters{File: v, Channels: []string{slacker.Callback.Channel.ID}})
 					if err != nil {
 						fmt.Printf("Error encountered when uploading artifact: %+v\n", err)
