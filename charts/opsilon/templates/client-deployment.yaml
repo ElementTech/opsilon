@@ -1,0 +1,68 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ template "opsilon.fullname" . }}-client
+  labels:
+    app: {{ template "opsilon.name" . }}-client
+    chart: {{ template "opsilon.chart" . }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+spec:
+  replicas: {{ .Values.client.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ template "opsilon.name" . }}-client
+      release: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app: {{ template "opsilon.name" . }}-client
+        release: {{ .Release.Name }}
+{{- with .Values.client.annotations }}
+      annotations:
+{{ toYaml . | indent 8 }}       
+{{- end }} 
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: {{ .Chart.Name }}
+          image: "{{ .Values.client.image.repository }}:{{ .Values.client.image.tag }}"
+          imagePullPolicy: {{ .Values.client.image.pullPolicy }}
+          command: ["/bin/sh","-c","envsubst '$${SERVER_ADDRESS}'< /etc/nginx/nginx.conf.template > /etc/nginx/nginx.conf && nginx -g 'daemon off;'"]
+          env:    
+            - name: SERVER_ADDRESS 
+              value: {{ template "opsilon.name" . }}-server  
+          {{- if or $.Values.env $.Values.envSecrets }}
+            {{- range $key, $value := $.Values.env }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+            {{- end }}
+            {{- range $key, $secret := $.Values.envSecrets }}
+            - name: {{ $key }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $secret }}
+                  key: {{ $key | quote }}
+            {{- end }}
+          {{- end }}                 
+          ports:
+            - name: http
+              containerPort: 80
+              protocol: TCP
+          resources:
+{{ toYaml .Values.client.resources | indent 12 }}
+    {{- with .Values.client.nodeSelector }}
+      nodeSelector:
+{{ toYaml . | indent 8 }}
+    {{- end }}
+    {{- with .Values.client.affinity }}
+      affinity:
+{{ toYaml . | indent 8 }}
+    {{- end }}
+    {{- with .Values.client.tolerations }}
+      tolerations:
+{{ toYaml . | indent 8 }}
+    {{- end }}

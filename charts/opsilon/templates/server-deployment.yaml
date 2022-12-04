@@ -1,0 +1,84 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ template "opsilon.fullname" . }}-server
+  labels:
+    app: {{ template "opsilon.name" . }}-server
+    chart: {{ template "opsilon.chart" . }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+spec:
+  replicas: {{ .Values.server.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ template "opsilon.name" . }}-server
+      release: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app: {{ template "opsilon.name" . }}-server
+        release: {{ .Release.Name }}
+{{- with .Values.server.annotations }}
+      annotations:
+{{ toYaml . | indent 8 }}       
+{{- end }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}    
+      restartPolicy: Always
+      volumes: 
+        - name: tmp
+          emptyDir: {}          
+      containers:
+        - name: {{ .Chart.Name }}
+          image: "{{ .Values.server.image.repository }}:{{ .Values.server.image.tag }}"
+          imagePullPolicy: {{ .Values.server.image.pullPolicy }}
+          command: ["./opsilon"]
+          args: ["server"]
+          volumeMounts: 
+            - name: tmp
+              mountPath: /tmp   
+          env:        
+            - name: KUBERNETES
+              value: "true"           
+            - name: DATABASE
+              value: "true"
+            - name: CONSUL
+              value: "true"              
+            - name: MONGODB_URI
+              value: "mongodb://{{ template "opsilon.name" . }}-mongodb-headless:27017"        
+            - name: CONSUL_URI
+              value: "{{ template "opsilon.name" . }}-consul:8500"        
+          {{- if or $.Values.env $.Values.envSecrets }}
+            {{- range $key, $value := $.Values.env }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+            {{- end }}
+            {{- range $key, $secret := $.Values.envSecrets }}
+            - name: {{ $key }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $secret }}
+                  key: {{ $key | quote }}
+            {{- end }}
+          {{- end }}                                     
+          ports:
+            - name: http
+              containerPort: 4000
+              protocol: TCP
+          resources:
+{{ toYaml .Values.server.resources | indent 12 }}
+    {{- with .Values.server.nodeSelector }}
+      nodeSelector:
+{{ toYaml . | indent 8 }}
+    {{- end }}
+    {{- with .Values.server.affinity }}
+      affinity:
+{{ toYaml . | indent 8 }}
+    {{- end }}
+    {{- with .Values.server.tolerations }}
+      tolerations:
+{{ toYaml . | indent 8 }}
+    {{- end }}
