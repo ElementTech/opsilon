@@ -1,14 +1,14 @@
 {{- if .Values.ingress.enabled -}}
-{{- $fullName := include "opsilon.fullname" . -}}
-{{- $name := include "opsilon.name" . -}}
+{{- $fullName := include "fullname" . -}}
+{{- $name := include "name" . -}}
 {{- $ingressPath := .Values.ingress.path -}}
 apiVersion: extensions/v1beta1
 kind: Ingress
 metadata:
   name: {{ $fullName }}-client
   labels:
-    app: {{ template "opsilon.name" . }}-client
-    chart: {{ template "opsilon.chart" . }}
+    app: {{ template "name" . }}-client
+    chart: {{ template "chart" . }}
     release: {{ .Release.Name }}
     heritage: {{ .Release.Service }}
 {{- with .Values.ingress.annotations }}

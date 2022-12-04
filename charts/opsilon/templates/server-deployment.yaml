@@ -1,28 +1,32 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ template "opsilon.fullname" . }}-server
+  name: {{ template "fullname" . }}-server
   labels:
-    app: {{ template "opsilon.name" . }}-server
-    chart: {{ template "opsilon.chart" . }}
+    app: {{ template "name" . }}-server
+    chart: {{ template "chart" . }}
     release: {{ .Release.Name }}
     heritage: {{ .Release.Service }}
 spec:
   replicas: {{ .Values.server.replicaCount }}
   selector:
     matchLabels:
-      app: {{ template "opsilon.name" . }}-server
+      app: {{ template "name" . }}-server
       release: {{ .Release.Name }}
   template:
     metadata:
       labels:
-        app: {{ template "opsilon.name" . }}-server
+        app: {{ template "name" . }}-server
         release: {{ .Release.Name }}
 {{- with .Values.server.annotations }}
       annotations:
 {{ toYaml . | indent 8 }}       
 {{- end }}
     spec:
+      # Service Account creation
+      {{- if or (eq .Values.serviceAccount.enabled true) (eq .Values.rbac.create true) }}
+      serviceAccountName: {{ template "name" . }}
+      {{- end }}    
       {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
@@ -48,9 +52,9 @@ spec:
             - name: CONSUL
               value: "true"              
             - name: MONGODB_URI
-              value: "mongodb://{{ template "opsilon.name" . }}-mongodb-headless:27017"        
+              value: "mongodb://{{ template "name" . }}-mongodb-headless:27017"        
             - name: CONSUL_URI
-              value: "{{ template "opsilon.name" . }}-consul:8500"        
+              value: "{{ template "name" . }}-consul:8500"        
           {{- if or $.Values.env $.Values.envSecrets }}
             {{- range $key, $value := $.Values.env }}
             - name: {{ $key }}

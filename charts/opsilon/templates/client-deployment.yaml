@@ -1,22 +1,22 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ template "opsilon.fullname" . }}-client
+  name: {{ template "fullname" . }}-client
   labels:
-    app: {{ template "opsilon.name" . }}-client
-    chart: {{ template "opsilon.chart" . }}
+    app: {{ template "name" . }}-client
+    chart: {{ template "chart" . }}
     release: {{ .Release.Name }}
     heritage: {{ .Release.Service }}
 spec:
   replicas: {{ .Values.client.replicaCount }}
   selector:
     matchLabels:
-      app: {{ template "opsilon.name" . }}-client
+      app: {{ template "name" . }}-client
       release: {{ .Release.Name }}
   template:
     metadata:
       labels:
-        app: {{ template "opsilon.name" . }}-client
+        app: {{ template "name" . }}-client
         release: {{ .Release.Name }}
 {{- with .Values.client.annotations }}
       annotations:
@@ -34,7 +34,7 @@ spec:
           command: ["/bin/sh","-c","envsubst '$${SERVER_ADDRESS}'< /etc/nginx/nginx.conf.template > /etc/nginx/nginx.conf && nginx -g 'daemon off;'"]
           env:    
             - name: SERVER_ADDRESS 
-              value: {{ template "opsilon.name" . }}-server  
+              value: {{ template "name" . }}-server  
           {{- if or $.Values.env $.Values.envSecrets }}
             {{- range $key, $value := $.Values.env }}
             - name: {{ $key }}

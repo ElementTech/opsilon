@@ -1,0 +1,32 @@
+{{- if .Values.server.autoscaling.enabled }}
+################################################
+# Standardized Templates - Horizontal Pod Autoscaler (HPA)
+# Author/Maintainer: Farley <farley@neonsurge.com>
+################################################
+apiVersion: autoscaling/v2beta1
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ template "name" . }}-server
+  # include labels for this service to identify it
+{{- include "labels" . | indent 2 }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v2beta1
+    kind: Deployment
+    name: {{ template "name" . }}-server
+  minReplicas: {{ .Values.server.autoscaling.minReplicas }}
+  maxReplicas: {{ .Values.server.autoscaling.maxReplicas }}
+  metrics:
+{{- if .Values.server.autoscaling.targetCPUUtilizationPercentage }}
+    - type: Resource
+      resource:
+        name: cpu
+        targetAverageUtilization: {{ .Values.server.autoscaling.targetCPUUtilizationPercentage }}
+{{- end -}}
+{{- if .Values.server.autoscaling.targetMemoryUtilizationPercentage }}
+    - type: Resource
+      resource:
+        name: memory
+        targetAverageUtilization: {{ .Values.server.autoscaling.targetMemoryUtilizationPercentage }}
+{{- end }}
+{{- end }}
