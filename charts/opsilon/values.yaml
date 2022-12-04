@@ -25,6 +25,7 @@ client:
   resources: {}
 
 server:
+  slackMode: false
   replicaCount: 1
   image:
     repository: jatalocks333/opsilon
@@ -34,7 +35,9 @@ server:
     type: ClusterIP
     port: 8080
     annotations: {}
-  env: []
+  env: # Relevant for slackMode=true
+    SLACK_BOT_TOKEN: xoxb-123
+    SLACK_APP_TOKEN: xapp-123
   envSecrets: []
   annotations: {}    
   nodeSelector: {}
