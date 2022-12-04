@@ -11,6 +11,7 @@ For full usage, please refer to the: [Docs](/assets/doc.md).
 - [Opsilon](#opsilon)
 - [Download](#download)
     - [Quickstart](#quickstart)
+    - [Helm](#helm)
   - [Usage](#usage)
     - [Extra Flags](#extra-flags)
 - [Demo](#demo)
@@ -43,6 +44,12 @@ Move the executable to a folder on your `$PATH`:
 
 ```bash
 $ mv opsilon /usr/local/bin/opsilon # or /usr/bin/opsilon
+```
+
+### Helm
+
+```bash
+$ helm install https://github.com/jatalocks/opsilon/releases/download/opsilon-0.4.2-helm/opsilon-0.4.2-helm.tgz
 ```
 ## Usage
 Make sure you have Docker installed on your computer (or connected to a kubernetes cluster `--kubernetes`).
