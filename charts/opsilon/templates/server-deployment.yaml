@@ -48,7 +48,7 @@ spec:
             - name: MONGODB_URI
               value: "mongodb://{{ template "name" . }}-mongodb-headless:27017"        
             - name: CONSUL_URI
-              value: "{{ template "name" . }}-consul:8500"        
+              value: "{{ template "name" . }}-consul-headless:8500"        
           {{- if or $.Values.env $.Values.envSecrets }}
             {{- range $key, $value := $.Values.env }}
             - name: {{ $key }}
