@@ -8,5 +8,5 @@ dependencies:
     repository: https://charts.bitnami.com/bitnami
     version: 13.5.0
   - name: consul
-    repository: https://helm.releases.hashicorp.com
-    version: 1.0.2
+    repository: https://charts.bitnami.com/bitnami
+    version: 10.9.6
