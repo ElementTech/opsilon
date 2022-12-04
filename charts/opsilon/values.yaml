@@ -60,6 +60,9 @@ ingress:
   #    hosts:
   #      - chart-example.local
 
+consul:
+  replicaCount: 1
+
 mongodb:
   persistence:
     enabled: true
