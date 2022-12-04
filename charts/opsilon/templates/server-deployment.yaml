@@ -42,7 +42,7 @@ spec:
             "--database",
             "--kubernetes",
             "--consul_uri={{ template "name" . }}-consul-headless:8500",
-            "--mongodb_uri={{ template "name" . }}-mongodb-headless:27017"
+            "--mongodb_uri=mongodb://{{ template "name" . }}-mongodb-headless:27017"
           ]
           {{- if or $.Values.env $.Values.envSecrets }}
           env:        
