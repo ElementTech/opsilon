@@ -1,18 +1,23 @@
 package internaltypes
 
 import (
+	"time"
+
 	"github.com/shomali11/slacker"
 	"github.com/slack-go/slack"
 )
 
 type Result struct {
-	_id      string
-	Workflow string
-	Stage    Stage
-	Result   bool
-	Skipped  bool
-	Outputs  []Env
-	Logs     []string
+	_id         string
+	RunID       string
+	Workflow    string
+	Stage       Stage
+	Result      bool
+	Skipped     bool
+	Outputs     []Env
+	Logs        []string
+	CreatedDate time.Time
+	UpdatedDate time.Time
 }
 
 type Input struct {

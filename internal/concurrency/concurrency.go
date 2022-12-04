@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/docker/docker/client"
+	"github.com/google/uuid"
 	"github.com/jatalocks/opsilon/internal/config"
 	"github.com/jatalocks/opsilon/internal/db"
 	"github.com/jatalocks/opsilon/internal/engine"
@@ -210,15 +211,23 @@ func zipSource(source, target string) error {
 }
 
 func processResults(results *chan internaltypes.Result, resultsArray *[]internaltypes.Result, c echo.Context, w internaltypes.Workflow, slacker internaltypes.SlackMesseger) {
+	u, err := uuid.NewUUID()
+	CreatedDate := time.Now()
+	logger.HandleErr(err)
 	for str := range *results {
 		*resultsArray = append(*resultsArray, str)
-		hash, err := hashstructure.Hash(w, hashstructure.FormatV2, nil)
+		tempW := w
+		tempW.Input = []internaltypes.Input{}
+		hash, err := hashstructure.Hash(tempW, hashstructure.FormatV2, nil)
 		strHash := fmt.Sprint(hash)
 		logger.HandleErr(err)
 		str.Workflow = strHash
 		go func() {
-			go db.ReplaceOne("workflows", bson.M{"_id": strHash}, w)
+			go db.ReplaceOne("workflows", bson.M{"_id": strHash}, tempW)
 			logger.HandleErr(err)
+			str.RunID = u.String()
+			str.CreatedDate = CreatedDate
+			str.UpdatedDate = time.Now()
 			go db.InsertOne("results", str)
 			logger.HandleErr(err)
 		}()
@@ -230,14 +239,22 @@ func processResults(results *chan internaltypes.Result, resultsArray *[]internal
 		} else {
 			if str.Skipped {
 				logger.Operation("Stage", str.Stage.ID, "Skipped")
-				streamResultToSlackContext(slacker, fmt.Sprint(":ballot_box_with_check: Stage ", str.Stage.ID, " Skipped"))
+				if slacker.Callback != nil {
+					streamResultToSlackContext(slacker, fmt.Sprint(":ballot_box_with_check: Stage ", str.Stage.ID, " Skipped"))
+				}
 			} else {
 				logger.Error("Stage", str.Stage.ID, "Failed")
-				streamResultToSlackContext(slacker, fmt.Sprint(":heavy_multiplication_x: Stage ", str.Stage.ID, " Failed"))
+				if slacker.Callback != nil {
+					streamResultToSlackContext(slacker, fmt.Sprint(":heavy_multiplication_x: Stage ", str.Stage.ID, " Failed"))
+				}
 			}
 		}
 		if c != nil {
-			streamResultToEchoContext(c, str)
+			for _, l := range str.Logs {
+				tempStr := str
+				tempStr.Logs = []string{l}
+				streamResultToEchoContext(c, tempStr)
+			}
 		}
 		// if slacker.Callback != nil {
 		// 	streamResultToSlackContext(slacker, str)
@@ -245,14 +262,14 @@ func processResults(results *chan internaltypes.Result, resultsArray *[]internal
 	}
 }
 
-func streamResultToEchoContext(c echo.Context, result internaltypes.Result) error {
+func streamResultToEchoContext(c echo.Context, result internaltypes.Result) {
+
 	enc := json.NewEncoder(c.Response())
+	enc.SetEscapeHTML(true)
 	if err := enc.Encode(result); err != nil {
-		return err
+		fmt.Println(err)
 	}
 	c.Response().Flush()
-	// time.Sleep(1 * time.Second)
-	return nil
 }
 
 func streamResultToSlackContext(slacker internaltypes.SlackMesseger, str string) error {
