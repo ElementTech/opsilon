@@ -80,7 +80,9 @@ func initConfig() {
 		viper.SetConfigType("yaml") // Need to explicitly set this to yaml
 
 		// Get a new client
-		client, err := api.NewClient(api.DefaultConfig())
+		client, err := api.NewClient(&api.Config{
+			Address: consul_uri,
+		})
 		logger.HandleErr(err)
 		// Get a handle to the KV API
 		kv := client.KV()
