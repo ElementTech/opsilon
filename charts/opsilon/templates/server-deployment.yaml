@@ -40,17 +40,11 @@ spec:
           image: "{{ .Values.server.image.repository }}:{{ .Values.server.image.tag }}"
           imagePullPolicy: {{ .Values.server.image.pullPolicy }}
           command: ["./opsilon"]
-          args: ["server"]
+          args: ["server --consul --database --kubernetes"]
           volumeMounts: 
             - name: tmp
               mountPath: /tmp   
           env:        
-            - name: KUBERNETES
-              value: "true"           
-            - name: DATABASE
-              value: "true"
-            - name: CONSUL
-              value: "true"              
             - name: MONGODB_URI
               value: "mongodb://{{ template "name" . }}-mongodb-headless:27017"        
             - name: CONSUL_URI
