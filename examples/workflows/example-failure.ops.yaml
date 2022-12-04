@@ -1,0 +1,42 @@
+# ID of job
+id: example-failure
+
+# Help Description
+description: this is an example workflow which will always fail
+
+# Global Docker Image. Used if no Stage specific image is specified.
+image: alpine:latest
+
+# Global Environment Variables for use inside the containers.
+env:
+  - name: testkey
+    value: testvalue
+
+# Inputs for users to enter in the CLI when using 'run'
+input:
+  - name: myinput
+    optional: true # If skipped in the CLI input phase, will default to an empty string [($arg3 == "") == true]
+
+# Stages Rules
+# 1. All stages will run in parallel unless they have a "needs" field
+stages:
+  - stage: wait and fail # Name of the stage. These can be non-unique.
+    id: stageid # ID of the stage. Used for 'outputs' and 'needs'. These need to be unique.
+    image: ubuntu:latest # Override global image for this stage only.
+    script: # Array of arguments to the container. $OUTPUT contains an output file. every key=value here will be available for export.
+      - sh
+      - -c
+      - |
+        sleep 1
+        echo Almost There. Soon Failing.
+        exit 1
+  - stage: wait and fail # Name of the stage. These can be non-unique.
+    id: stageid # ID of the stage. Used for 'outputs' and 'needs'. These need to be unique.
+    needs: stageid
+    image: ubuntu:latest # Override global image for this stage only.
+    script: # Array of arguments to the container. $OUTPUT contains an output file. every key=value here will be available for export.
+      - sh
+      - -c
+      - |
+        sleep 1
+        echo It doesn't matter if I succeed. This workflow is done for.   
