@@ -36,9 +36,8 @@ spec:
         - name: {{ .Chart.Name }}
           image: "{{ .Values.server.image.repository }}:{{ .Values.server.image.tag }}"
           imagePullPolicy: {{ .Values.server.image.pullPolicy }}
-          command: ["./opsilon"]
+          command: ["./opsilon","server"]
           args: [
-            "server",
             "--consul",
             "--database",
             "--kubernetes",
