@@ -1,0 +1,20 @@
+apiVersion: v1
+entries:
+  opsilon:
+  - apiVersion: v2
+    appVersion: 0.4.2
+    created: "2022-12-04T15:19:21.811856385Z"
+    dependencies:
+    - name: mongodb
+      repository: https://charts.bitnami.com/bitnami
+      version: 13.5.0
+    - name: consul
+      repository: https://charts.bitnami.com/bitnami
+      version: 10.9.6
+    description: A Helm chart for Kubernetes
+    digest: 4a350f9e133997590ebf779225690e0dc0cbc63d5bdcb8ea65ab7949720fbf2d
+    name: opsilon
+    urls:
+    - https://github.com/jatalocks/opsilon/releases/download/opsilon-0.4.2-helm/opsilon-0.4.2-helm.tgz
+    version: 0.4.2-helm
+generated: "2022-12-04T15:19:21.811871185Z"
