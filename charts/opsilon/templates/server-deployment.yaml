@@ -33,10 +33,39 @@ spec:
       {{- end }}    
       restartPolicy: Always
       containers:
+        {{- if (eq .Values.server.slackMode true) }}
+        - name: slack
+          image: "{{ .Values.server.image.repository }}:{{ .Values.server.image.tag }}"
+          imagePullPolicy: {{ .Values.server.image.pullPolicy }}
+          command: ["./opsilon","server"]
+          args: [
+            "--consul",
+            "--database",
+            "--kubernetes",
+            "--consul_uri={{ template "name" . }}-consul-headless:8500",
+            "--mongodb_uri=mongodb://{{ template "name" . }}-mongodb-headless:27017"
+          ]
+          {{- if or $.Values.env $.Values.envSecrets }}
+          env:        
+            {{- range $key, $value := $.Values.env }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+            {{- end }}
+            {{- range $key, $secret := $.Values.envSecrets }}
+            - name: {{ $key }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $secret }}
+                  key: {{ $key | quote }}
+            {{- end }}
+          {{- end }}                                     
+          resources:      
+{{ toYaml .Values.server.resources | indent 12 }}          
+        {{- end }} 
         - name: {{ .Chart.Name }}
           image: "{{ .Values.server.image.repository }}:{{ .Values.server.image.tag }}"
           imagePullPolicy: {{ .Values.server.image.pullPolicy }}
-          command: ["./opsilon",{{ ternary "slack" "server" (eq .Values.server.slackMode true)}}]
+          command: ["./opsilon","server"]
           args: [
             "--consul",
             "--database",
