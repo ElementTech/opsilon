@@ -17,8 +17,6 @@ input:
   - name: myinput
     optional: true # If skipped in the CLI input phase, will default to an empty string [($arg3 == "") == true]
 
-mount: false # If true, will mount a copy of the working directory as the volume of the stages
-
 # Stages Rules
 # 1. All stages will run in parallel unless they have a "needs" field
 stages:
