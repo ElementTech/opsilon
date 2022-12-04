@@ -40,7 +40,7 @@ spec:
           image: "{{ .Values.server.image.repository }}:{{ .Values.server.image.tag }}"
           imagePullPolicy: {{ .Values.server.image.pullPolicy }}
           command: ["./opsilon"]
-          args: ["server --consul --database --kubernetes"]
+          args: ["server","--consul","--database","--kubernetes"]
           volumeMounts: 
             - name: tmp
               mountPath: /tmp   
