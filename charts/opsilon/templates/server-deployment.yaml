@@ -32,24 +32,21 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}    
       restartPolicy: Always
-      volumes: 
-        - name: tmp
-          emptyDir: {}          
       containers:
         - name: {{ .Chart.Name }}
           image: "{{ .Values.server.image.repository }}:{{ .Values.server.image.tag }}"
           imagePullPolicy: {{ .Values.server.image.pullPolicy }}
           command: ["./opsilon"]
-          args: ["server","--consul","--database","--kubernetes"]
-          volumeMounts: 
-            - name: tmp
-              mountPath: /tmp   
-          env:        
-            - name: MONGODB_URI
-              value: "mongodb://{{ template "name" . }}-mongodb-headless:27017"        
-            - name: CONSUL_URI
-              value: "{{ template "name" . }}-consul-headless:8500"        
+          args: [
+            "server",
+            "--consul",
+            "--database",
+            "--kubernetes",
+            "--consul_uri="{{ template "name" . }}-consul-headless:8500",
+            "--mongodb_uri="{{ template "name" . }}-mongodb-headless:27017"
+          ]
           {{- if or $.Values.env $.Values.envSecrets }}
+          env:        
             {{- range $key, $value := $.Values.env }}
             - name: {{ $key }}
               value: {{ $value | quote }}
