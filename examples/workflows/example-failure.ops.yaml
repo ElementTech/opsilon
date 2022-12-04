@@ -31,7 +31,7 @@ stages:
         echo Almost There. Soon Failing.
         exit 1
   - stage: wait and fail # Name of the stage. These can be non-unique.
-    id: stageid # ID of the stage. Used for 'outputs' and 'needs'. These need to be unique.
+    id: stageid2 # ID of the stage. Used for 'outputs' and 'needs'. These need to be unique.
     needs: stageid
     image: ubuntu:latest # Override global image for this stage only.
     script: # Array of arguments to the container. $OUTPUT contains an output file. every key=value here will be available for export.
