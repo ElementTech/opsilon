@@ -2,7 +2,7 @@
 id: example-failure
 
 # Help Description
-description: this is an example workflow which will always fail
+description: this is an example workflow which will always fail unless shouldIFail=no.
 
 # Global Docker Image. Used if no Stage specific image is specified.
 image: alpine:latest
@@ -14,29 +14,31 @@ env:
 
 # Inputs for users to enter in the CLI when using 'run'
 input:
-  - name: myinput
+  - name: shouldIFail
+    default: "yes"
     optional: true # If skipped in the CLI input phase, will default to an empty string [($arg3 == "") == true]
 
 # Stages Rules
 # 1. All stages will run in parallel unless they have a "needs" field
 stages:
   - stage: wait and fail # Name of the stage. These can be non-unique.
-    id: stageid # ID of the stage. Used for 'outputs' and 'needs'. These need to be unique.
+    id: fail # ID of the stage. Used for 'outputs' and 'needs'. These need to be unique.
     image: ubuntu:latest # Override global image for this stage only.
+    if: $shouldIFail == "yes" 
     script: # Array of arguments to the container. $OUTPUT contains an output file. every key=value here will be available for export.
       - sh
       - -c
       - |
         sleep 1
-        echo Almost There. Soon Failing.
+        echo I shall fail :(
         exit 1
   - stage: wait and fail # Name of the stage. These can be non-unique.
-    id: stageid2 # ID of the stage. Used for 'outputs' and 'needs'. These need to be unique.
-    needs: stageid
+    id: succeed # ID of the stage. Used for 'outputs' and 'needs'. These need to be unique.
+    if: $shouldIFail == "no" 
     image: ubuntu:latest # Override global image for this stage only.
     script: # Array of arguments to the container. $OUTPUT contains an output file. every key=value here will be available for export.
       - sh
       - -c
       - |
         sleep 1
-        echo It doesn't matter if I succeed. This workflow is done for.   
+        echo I shall not fail!
