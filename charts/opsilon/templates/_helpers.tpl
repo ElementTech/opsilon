@@ -1,10 +1,28 @@
+{{/* vim: set filetype=mustache: */}}
 {{/*
-Define the standardized name of this helm chart and its objects
+Expand the name of the chart.
 */}}
 {{- define "name" -}}
-{{- required "A valid Values.name is required!" .Values.name | trunc 63 | trimSuffix "-" -}}
+{{- default .Chart.Name .Values.nameOverride | trunc 63 | trimSuffix "-" -}}
 {{- end -}}
 
+{{/*
+Create a default fully qualified app name.
+We truncate at 63 chars because some Kubernetes name fields are limited to this (by the DNS naming spec).
+If release name contains chart name it will be used as a full name.
+*/}}
+{{- define "fullname" -}}
+{{- if .Values.fullnameOverride -}}
+{{- .Values.fullnameOverride | trunc 63 | trimSuffix "-" -}}
+{{- else -}}
+{{- $name := default .Chart.Name .Values.nameOverride -}}
+{{- if contains $name .Release.Name -}}
+{{- .Release.Name | trunc 63 | trimSuffix "-" -}}
+{{- else -}}
+{{- printf "%s-%s" .Release.Name $name | trunc 63 | trimSuffix "-" -}}
+{{- end -}}
+{{- end -}}
+{{- end -}}
 {{/*
 Define the standardized namespace, this is NOT defined in the output yaml files,
 but it is used inside some variables and eg: for the urls generated for our
@@ -41,36 +59,25 @@ Create chart name and version as used by the chart label.  Version is optional b
 {{- printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" | trunc 63 | trimSuffix "-" -}}
 {{- end -}}
 {{- end -}}
-
 {{/*
 Generate basic labels for pods/services/etc
 Sample Usage: {{- include "labels" . | indent 2 }}
 */}}
 {{- define "labels" }}
 labels:
-
 {{- if .Values.usingNewRecommendedLabels }}
 # see: https://kubernetes.io/docs/concepts/overview/working-with-objects/common-labels/
-
 {{- if .Values.labelsEnableDefault }}
   app.kubernetes.io/name: {{ .Values.name | trunc 63 | trimSuffix "-" | quote }}
   app.kubernetes.io/instance: {{ .Values.name | trunc 63 | trimSuffix "-" | quote }}
 {{- end }}
-
 {{- else }}
-
 {{- if .Values.labelsEnableDefault }}
   app: {{ .Values.name | trunc 63 | trimSuffix "-" | quote }}
 {{- end }}
-
 {{- end }}
-
 {{ include "labels_without_key_or_name" . | indent 2 }}
-
 {{- end }}
-
-
-
 {{- define "labels_without_key_or_name" }}
 {{- if .Values.usingNewRecommendedLabels }}
 # see: https://kubernetes.io/docs/concepts/overview/working-with-objects/common-labels/
@@ -81,7 +88,6 @@ app.kubernetes.io/managed-by: "helm"
 {{ if .Values.labels -}}
 {{ toYaml .Values.labels }}
 {{- end }}
-
 {{- else }}
 chart: {{ include "chart" . | quote }}
 release: {{ .Release.Name | quote }}
@@ -91,29 +97,21 @@ generator: "helm"
 {{ if .Values.labels -}}
 {{ toYaml .Values.labels }}
 {{- end }}
-
 {{- end }}
-
 {{- end }}
-
-
 {{/*
 Get our repo based on our environment name, but allow overriding if someone thinks they know better
 */}}
 {{- define "get-repository" -}}
 {{- required "A valid Values.image.repository is required!" .Values.image.repository | trimSuffix ":" -}}
 {{- end -}}
-
-
 {{/*
 Get our release tag the best we can.
 If we are customizing the image repository then this is not built internally, use image.tag or latest
 If we are not, then use global image tag if set (from gitlab ci/cd) or fallback to image tag
 */}}
 {{- define "get-release-tag" -}}
-
 {{- if .Values.image.repository -}}
-
 {{- if .Values.image.tag -}}
 {{- .Values.image.tag -}}
 {{- else if .Values.global.image.tag -}}
@@ -121,9 +119,7 @@ If we are not, then use global image tag if set (from gitlab ci/cd) or fallback 
 {{- else -}}
 latest
 {{- end -}}
-
 {{- else -}}
-
 {{- if .Values.global.image.tag -}}
 {{- .Values.global.image.tag -}}
 {{- else if .Values.image.tag -}}
@@ -131,12 +127,8 @@ latest
 {{- else -}}
 no-image-tag-could-be-found
 {{- end -}}
-
 {{- end -}}
-
 {{- end -}}
-
-
 {{/*
 Create the name of the ingress resource (used for legacy purposes and zero downtime for legacy)
 */}}
@@ -147,8 +139,6 @@ Create the name of the ingress resource (used for legacy purposes and zero downt
     {{ template "name" . }}
 {{- end -}}
 {{- end -}}
-
-
 {{/*
 Create the name of the ingress_secondary resource (used for legacy purposes and zero downtime for legacy)
 */}}
@@ -159,42 +149,36 @@ Create the name of the ingress_secondary resource (used for legacy purposes and 
     {{ template "name" . }}
 {{- end -}}
 {{- end -}}
-
 {{/*
 Return the appropriate apiVersion for deployment.
 */}}
 {{- define "deployment.apiVersion" -}}
 {{- print "apps/v1" -}}
 {{- end -}}
-
 {{/*
 Return the appropriate apiVersion for daemonset.
 */}}
 {{- define "daemonset.apiVersion" -}}
 {{- print "apps/v1" -}}
 {{- end -}}
-
 {{/*
 Return the appropriate apiVersion for statefulset.
 */}}
 {{- define "statefulset.apiVersion" -}}
 {{- print "apps/v1" -}}
 {{- end -}}
-
 {{/*
 Return the appropriate apiVersion for networkpolicy.
 */}}
 {{- define "networkPolicy.apiVersion" -}}
 {{- print "networking.k8s.io/v1" -}}
 {{- end -}}
-
 {{/*
 Return the appropriate apiVersion for podsecuritypolicy.
 */}}
 {{- define "podSecurityPolicy.apiVersion" -}}
 {{- print "policy/v1beta1" -}}
 {{- end -}}
-
 {{/*
 Return the appropriate apiVersion for rbac.
 */}}
@@ -205,7 +189,6 @@ Return the appropriate apiVersion for rbac.
 {{- print "rbac.authorization.k8s.io/v1beta1" -}}
 {{- end -}}
 {{- end -}}
-
 {{/*
 Return the appropriate apiVersion for ingress.
 */}}
@@ -218,14 +201,12 @@ Return the appropriate apiVersion for ingress.
     {{- print "extensions/v1beta1" -}}
   {{- end -}}
 {{- end -}}
-
 {{/*
 Return if ingress is stable.
 */}}
 {{- define "ingress.isStable" -}}
   {{- eq (include "ingress.apiVersion" .) "networking.k8s.io/v1" -}}
 {{- end -}}
-
 {{/*
 Return if ingress supports ingressClassName.
 */}}

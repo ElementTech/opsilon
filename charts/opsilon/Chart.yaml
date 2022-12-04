@@ -1,22 +1,12 @@
-apiVersion: v1
+apiVersion: v2
+appVersion: "0.4.1"
+description: A Helm chart for Kubernetes
 name: opsilon
-version: 0.4.0
-appVersion: v0.4.0-alpha
-description: Helm Chart for Opsilon
-keywords:
-  - opsilon
-  - workflow
-  - repository
-  - container
-  - docker
-  - kubernetes
-  - engine
-  - cli
-  - api
-home: https://github.com/DevOps-Nirvana/Universal-Kubernetes-Helm-Charts
-sources:
-  - https://devops-nirvana.s3.amazonaws.com/helm-charts/
-  - https://github.com/DevOps-Nirvana/Universal-Kubernetes-Helm-Charts/charts/deployment
-maintainers:
-  - name: Jatalocks
-    email: devops@explorium.ai
+version: 0.4.1
+dependencies:
+  - name: mongodb
+    repository: https://charts.bitnami.com/bitnami
+    version: 13.5.0
+  - name: consul
+    repository: https://charts.bitnami.com/bitnami
+    version: 10.9.6
