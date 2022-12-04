@@ -16,7 +16,6 @@ env:
 input:
   - name: shouldIFail
     default: "yes"
-    optional: true # If skipped in the CLI input phase, will default to an empty string [($arg3 == "") == true]
 
 # Stages Rules
 # 1. All stages will run in parallel unless they have a "needs" field
