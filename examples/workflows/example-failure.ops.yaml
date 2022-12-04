@@ -22,7 +22,6 @@ input:
 stages:
   - stage: wait and fail # Name of the stage. These can be non-unique.
     id: fail # ID of the stage. Used for 'outputs' and 'needs'. These need to be unique.
-    image: ubuntu:latest # Override global image for this stage only.
     if: $shouldIFail == "yes" 
     script: # Array of arguments to the container. $OUTPUT contains an output file. every key=value here will be available for export.
       - sh
@@ -34,7 +33,6 @@ stages:
   - stage: wait and fail # Name of the stage. These can be non-unique.
     id: succeed # ID of the stage. Used for 'outputs' and 'needs'. These need to be unique.
     if: $shouldIFail == "no" 
-    image: ubuntu:latest # Override global image for this stage only.
     script: # Array of arguments to the container. $OUTPUT contains an output file. every key=value here will be available for export.
       - sh
       - -c
