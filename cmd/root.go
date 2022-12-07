@@ -89,7 +89,7 @@ func initConfig() {
 		// PUT a new KV pair
 		err = viper.ReadRemoteConfig()
 		if err != nil {
-			p := &api.KVPair{Key: "OPSILON", Value: []byte("")}
+			p := &api.KVPair{Key: "default", Value: []byte("")}
 			_, err = kv.Put(p, nil)
 			logger.HandleErr(err)
 		}
