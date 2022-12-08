@@ -240,6 +240,7 @@ func wrhistory(c echo.Context) error {
 						return 0
 					}
 				}(),
+				Logs:     d.Logs,
 				Workflow: d.Workflow,
 				RunID:    d.RunID,
 				Result: func() bool {
@@ -257,7 +258,7 @@ func wrhistory(c echo.Context) error {
 			for i, g := range groupedDocs {
 				if g.RunID == d.RunID {
 					p := &groupedDocs[i]
-
+					p.Logs = append(p.Logs, d.Logs...)
 					p.RunTime += time.Duration(d.UpdatedDate.Sub(d.CreatedDate).Seconds())
 					p.StartTime = func() time.Time {
 						if p.StartTime.Unix() > d.CreatedDate.Unix() {
