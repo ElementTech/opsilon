@@ -20,6 +20,18 @@ type Result struct {
 	UpdatedDate time.Time
 }
 
+type RunResult struct {
+	SkippedStages    uint32
+	FailedStages     uint32
+	SuccessfulStages uint32
+	Workflow         string
+	RunID            string
+	Result           bool
+	RunTime          time.Duration
+	StartTime        time.Time
+	EndTime          time.Time
+}
+
 type Input struct {
 	Name     string `mapstructure:"name" validate:"nonzero,nowhitespace"`
 	Default  string `mapstructure:"default"`

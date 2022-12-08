@@ -6,6 +6,7 @@ import (
 	"log"
 	"time"
 
+	"github.com/jatalocks/opsilon/internal/internaltypes"
 	"github.com/jatalocks/opsilon/internal/logger"
 	"github.com/spf13/viper"
 	"go.mongodb.org/mongo-driver/bson"
@@ -166,6 +167,31 @@ func FindOne(collection string, filter bson.D, doc interface{}) error {
 
 func FindMany(collection string, filter bson.D) ([]interface{}, error) {
 	var docs []interface{}
+	clientOptions := options.Client().ApplyURI(viper.GetString("mongodb_uri"))
+	client, err := mongo.Connect(context.TODO(), clientOptions)
+	logger.HandleErr(err)
+	coll := client.Database("opsilon").Collection(collection)
+	// filter := bson.D{{"name", "Bagels N Buns"}}
+	cursor, err := coll.Find(context.TODO(), filter)
+	if err != nil {
+		return docs, err
+	}
+	if err = cursor.All(context.TODO(), &docs); err != nil {
+		return docs, err
+	}
+
+	// for _, doc := range docs {
+	// 	err := cursor.Decode(&doc)
+	// 	if err != nil {
+	// 		return docs, err
+	// 	}
+
+	// }
+	return docs, err
+}
+
+func FindManyResults(collection string, filter bson.D) ([]internaltypes.Result, error) {
+	var docs []internaltypes.Result
 	clientOptions := options.Client().ApplyURI(viper.GetString("mongodb_uri"))
 	client, err := mongo.Connect(context.TODO(), clientOptions)
 	logger.HandleErr(err)
