@@ -59,6 +59,8 @@ func ToGraph(w internaltypes.Workflow, c echo.Context, slacker internaltypes.Sla
 	fmt.Println("K8S", k8s)
 	results := make(chan internaltypes.Result)
 	resultsArray := []internaltypes.Result{}
+	u, err := uuid.NewUUID()
+	logger.HandleErr(err)
 	if !k8s {
 		cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 		logger.HandleErr(err)
@@ -75,11 +77,12 @@ func ToGraph(w internaltypes.Workflow, c echo.Context, slacker internaltypes.Sla
 		wg := new(sync.WaitGroup)
 		g := depgraph.New()
 		workflowToGraph(g, w)
+
 		for _, layer := range g.TopoSortedLayers() {
 			if (len(layer) > 0) && (layer[0] != "") {
 				fmt.Printf("Running in Parallel: %s\n", strings.Join(layer, ", "))
 				wg.Add(len(layer))
-				go processResults(&results, &resultsArray, c, w, slacker)
+				go processResults(&results, &resultsArray, c, w, slacker, u)
 				go runStageGroupDocker(wg, layer, cli, ctx, w, allOutputs, &skippedStages, results)
 				wg.Wait()
 			}
@@ -99,7 +102,7 @@ func ToGraph(w internaltypes.Workflow, c echo.Context, slacker internaltypes.Sla
 				fmt.Printf("Running in Parallel: %s\n", strings.Join(layer, ", "))
 				wg.Add(len(layer))
 
-				go processResults(&results, &resultsArray, c, w, slacker)
+				go processResults(&results, &resultsArray, c, w, slacker, u)
 				// go runStageGroupKubernetes(cli, wg, layer, ctx, w, vol, claim, allOutputs, &skippedStages, results)
 				go runStageGroupKubernetes(cli, wg, layer, ctx, w, allOutputs, &skippedStages, results)
 				wg.Wait()
@@ -210,10 +213,8 @@ func zipSource(source, target string) error {
 	})
 }
 
-func processResults(results *chan internaltypes.Result, resultsArray *[]internaltypes.Result, c echo.Context, w internaltypes.Workflow, slacker internaltypes.SlackMesseger) {
-	u, err := uuid.NewUUID()
+func processResults(results *chan internaltypes.Result, resultsArray *[]internaltypes.Result, c echo.Context, w internaltypes.Workflow, slacker internaltypes.SlackMesseger, u uuid.UUID) {
 	CreatedDate := time.Now()
-	logger.HandleErr(err)
 	for str := range *results {
 		*resultsArray = append(*resultsArray, str)
 		tempW := w

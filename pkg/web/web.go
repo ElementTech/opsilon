@@ -163,7 +163,6 @@ func getID(w, r string) (error, string) {
 	}
 	hashReturn := ""
 	for _, v := range wFlows {
-		fmt.Println(v.ID)
 		if v.ID == w {
 			v.Input = []internaltypes.Input{}
 			hash, err := hashstructure.Hash(v, hashstructure.FormatV2, nil)
@@ -181,7 +180,6 @@ func getID(w, r string) (error, string) {
 func wrid(c echo.Context) error {
 	workflow := c.QueryParam("workflow")
 	repo := c.QueryParam("repo")
-	fmt.Println(workflow, repo)
 	err, hash := getID(workflow, repo)
 	if err != nil {
 		return c.String(http.StatusInternalServerError, err.Error())
@@ -259,7 +257,6 @@ func wrhistory(c echo.Context) error {
 			for i, g := range groupedDocs {
 				if g.RunID == d.RunID {
 					p := &groupedDocs[i]
-					fmt.Println(d.Skipped, d.Result)
 
 					p.RunTime += time.Duration(d.UpdatedDate.Sub(d.CreatedDate).Seconds())
 					p.StartTime = func() time.Time {

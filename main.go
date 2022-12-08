@@ -5,7 +5,7 @@ package main
 
 import "github.com/jatalocks/opsilon/cmd"
 
-var version = "v0.4.4"
+var version = "v0.4.5"
 
 func main() {
 	cmd.Execute(version)
