@@ -49,7 +49,7 @@ $ mv opsilon /usr/local/bin/opsilon # or /usr/bin/opsilon
 ### Helm
 
 ```bash
-$ helm install https://github.com/jatalocks/opsilon/releases/download/opsilon-0.4.4-helm/opsilon-0.4.4-helm.tgz
+$ helm install https://github.com/jatalocks/opsilon/releases/download/opsilon-0.4.2-helm/opsilon-0.4.2-helm.tgz
 ```
 ## Usage
 Make sure you have Docker installed on your computer (or connected to a kubernetes cluster `--kubernetes`).
