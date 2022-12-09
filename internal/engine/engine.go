@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"time"
 	"unicode/utf8"
 
 	"github.com/Knetic/govaluate"
@@ -23,8 +24,11 @@ import (
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/stdcopy"
 	"github.com/fatih/color"
+	"github.com/jatalocks/opsilon/internal/db"
 	"github.com/jatalocks/opsilon/internal/internaltypes"
 	"github.com/jatalocks/opsilon/internal/logger"
+	"github.com/mitchellh/hashstructure/v2"
+	"github.com/spf13/viper"
 	"golang.org/x/exp/slices"
 )
 
@@ -276,7 +280,7 @@ func ReadPropertiesFile(filename string) ([]internaltypes.Env, error) {
 	return config, nil
 }
 
-func PrepareStage(wEnv []internaltypes.Env, sEnv []internaltypes.Env, inputs []internaltypes.Input, needs string, allOutputs map[string][]internaltypes.Env, stage string, id string, result *internaltypes.Result) ([]internaltypes.Env, []string, *logger.MyLogWriter, *log.Logger, *logger.MyLogWriter) {
+func PrepareStage(wEnv []internaltypes.Env, sEnv []internaltypes.Env, inputs []internaltypes.Input, needs string, allOutputs map[string][]internaltypes.Env, stage string, id string, result *internaltypes.Result, runid, hash string) ([]internaltypes.Env, []string, *logger.MyLogWriter, *log.Logger, *logger.MyLogWriter) {
 	allEnvs := append(wEnv, sEnv...)
 	allEnvs = append(allEnvs, GenEnvFromArgs(inputs)...)
 	needSplit := strings.Split(needs, ",")
@@ -289,11 +293,21 @@ func PrepareStage(wEnv []internaltypes.Env, sEnv []internaltypes.Env, inputs []i
 	}
 	LwWhite := logger.NewLogWriter(func(str string, color color.Attribute) {
 		logger.Custom(color, fmt.Sprintf("[%s:%s] %s", stage, id, str))
+		if viper.GetBool("database") {
+			for _, log := range result.Logs {
+				go db.InsertOne("logs", internaltypes.RunLog{Log: log, Stage: id, RunID: runid, Workflow: hash, CreatedDate: time.Now(), UpdatedDate: time.Now()})
+			}
+		}
 		result.Logs = append(result.Logs, fmt.Sprintf("[%s:%s] %s", stage, id, str))
 	}, color.FgWhite)
 
 	LwRed := logger.NewLogWriter(func(str string, color color.Attribute) {
 		logger.Custom(color, fmt.Sprintf("[%s:%s] %s", stage, id, str))
+		if viper.GetBool("database") {
+			for _, log := range result.Logs {
+				go db.InsertOne("logs", internaltypes.RunLog{Log: log, Stage: id, RunID: runid, Workflow: hash, CreatedDate: time.Now(), UpdatedDate: time.Now()})
+			}
+		}
 		result.Logs = append(result.Logs, fmt.Sprintf("[%s:%s] %s", stage, id, str))
 	}, color.FgRed)
 
@@ -301,13 +315,19 @@ func PrepareStage(wEnv []internaltypes.Env, sEnv []internaltypes.Env, inputs []i
 		colFuc := color.New(col).SprintFunc()
 		white := color.New(color.CrossedOut).SprintFunc()
 		logger.Free(white(fmt.Sprintf("[%s:%s] ", stage, id), colFuc(str)))
+		if viper.GetBool("database") {
+			for _, log := range result.Logs {
+				go db.InsertOne("logs", internaltypes.RunLog{Log: log, Stage: id, RunID: runid, Workflow: hash, CreatedDate: time.Now(), UpdatedDate: time.Now()})
+			}
+		}
+
 		result.Logs = append(result.Logs, fmt.Sprintf("[%s:%s] %s", stage, id, str))
 	}, color.BgYellow), "", 0)
 
 	return allEnvs, needSplit, LwWhite, LwCrossed, LwRed
 }
 
-func Engine(cli *client.Client, ctx context.Context, w internaltypes.Workflow, sID string, allOutputs map[string][]internaltypes.Env, wg *sync.WaitGroup, skippedStages *[]string, results chan internaltypes.Result) {
+func Engine(cli *client.Client, ctx context.Context, w internaltypes.Workflow, sID string, allOutputs map[string][]internaltypes.Env, wg *sync.WaitGroup, skippedStages *[]string, results chan internaltypes.Result, runid string) {
 	defer wg.Done()
 	idx := slices.IndexFunc(w.Stages, func(c internaltypes.Stage) bool { return c.ID == sID })
 	stage := w.Stages[idx]
@@ -320,7 +340,13 @@ func Engine(cli *client.Client, ctx context.Context, w internaltypes.Workflow, s
 	defer RemoveVolume(volOutput.Name, ctx, cli)
 	defer os.RemoveAll(dirOutput)
 
-	allEnvs, needSplit, LwWhite, LwCrossed, LwRed := PrepareStage(w.Env, stage.Env, w.Input, stage.Needs, allOutputs, stage.Stage, stage.ID, &result)
+	tempW := w
+	tempW.Input = []internaltypes.Input{}
+	hash, err := hashstructure.Hash(tempW, hashstructure.FormatV2, nil)
+	strHash := fmt.Sprint(hash)
+	logger.HandleErr(err)
+
+	allEnvs, needSplit, LwWhite, LwCrossed, LwRed := PrepareStage(w.Env, stage.Env, w.Input, stage.Needs, allOutputs, stage.Stage, stage.ID, &result, runid, strHash)
 	if !EvaluateCondition(stage.If, allEnvs, LwWhite) {
 		*skippedStages = append(*skippedStages, stage.ID)
 		result.Skipped = true

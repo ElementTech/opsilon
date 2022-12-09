@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gorilla/websocket"
 	"github.com/jatalocks/opsilon/internal/concurrency"
 	"github.com/jatalocks/opsilon/internal/config"
 	"github.com/jatalocks/opsilon/internal/db"
@@ -90,7 +91,34 @@ func App(port int64, v string) {
 		AddParamBody(internaltypes.WorkflowArgument{}, "workflow", "workflow to run", true)
 	// e.GET("/api/v1/swagger/*", echoSwagger.WrapHandler)
 	// Start server
+	e.GET("/api/v1/ws", runstream)
+
 	e.Echo().Logger.Fatal(e.Echo().Start(":" + fmt.Sprint(port)))
+}
+
+var (
+	upgrader = websocket.Upgrader{}
+)
+
+func runstream(c echo.Context) error {
+	ws, err := upgrader.Upgrade(c.Response(), c.Request(), nil)
+	if err != nil {
+		return err
+	}
+	defer ws.Close()
+	for {
+
+		// Read
+		// msg := internaltypes.WorkflowQuery{}
+		// err := ws.ReadJSON(&msg)
+		// if err != nil {
+		// 	c.Logger().Error(err)
+		// }
+		// _, hash := getID(msg.Name, msg.Repo)
+		// fmt.Printf("%s\n", msg)
+		db.WebSocket(ws)
+
+	}
 }
 
 func version(c echo.Context) error {
@@ -200,19 +228,18 @@ func GroupBy(arr interface{}, groupFunc interface{}) interface{} {
 }
 
 // Handler
-func wrhistory(c echo.Context) error {
-	workflow := c.QueryParam("workflow")
-	repo := c.QueryParam("repo")
+func getHistory(workflow, repo string) (error, []internaltypes.RunResult) {
+	groupedDocs := []internaltypes.RunResult{}
 	err, hash := getID(workflow, repo)
 	if err != nil {
-		return c.String(http.StatusInternalServerError, err.Error())
+		return err, nil
 	}
 	filter := bson.D{{Key: "workflow", Value: hash}}
 	docs, err := db.FindManyResults("results", filter)
 	if err != nil {
-		return c.String(http.StatusInternalServerError, err.Error())
+		// return c.String(http.StatusInternalServerError, err.Error())
+		return err, nil
 	}
-	groupedDocs := []internaltypes.RunResult{}
 	runIDS := []string{}
 	for _, d := range docs {
 
@@ -301,6 +328,18 @@ func wrhistory(c echo.Context) error {
 			}
 		}
 	}
+	return nil, groupedDocs
+}
+
+func wrhistory(c echo.Context) error {
+	workflow := c.QueryParam("workflow")
+	repo := c.QueryParam("repo")
+
+	err, groupedDocs := getHistory(workflow, repo)
+	if err != nil {
+		return c.String(http.StatusInternalServerError, err.Error())
+	}
+
 	return c.JSON(http.StatusOK, groupedDocs)
 }
 

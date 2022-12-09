@@ -6,6 +6,7 @@ import (
 	"log"
 	"time"
 
+	"github.com/gorilla/websocket"
 	"github.com/jatalocks/opsilon/internal/internaltypes"
 	"github.com/jatalocks/opsilon/internal/logger"
 	"github.com/spf13/viper"
@@ -20,7 +21,9 @@ func Init() {
 	dbEnabled := viper.GetBool("database")
 	fmt.Println("DB Enabled:", dbEnabled)
 	if viper.GetBool("database") {
+		fmt.Println("DB Enabled")
 		uri := viper.GetString("mongodb_uri")
+		fmt.Println("MongoDB URI", uri)
 		if uri == "" {
 			log.Fatal("You must set your 'MONGODB_URI' environmental variable. See\n\t https://www.mongodb.com/docs/drivers/go/current/usage-examples/#environment-variable")
 		}
@@ -35,6 +38,31 @@ func Init() {
 		}
 		client.Database("opsilon")
 		defer client.Disconnect(ctx)
+	}
+}
+
+func WebSocket(ws *websocket.Conn) {
+	clientOptions := options.Client().ApplyURI(viper.GetString("mongodb_uri"))
+	client, err := mongo.Connect(context.TODO(), clientOptions)
+	logger.HandleErr(err)
+	coll := client.Database("opsilon").Collection("logs")
+	logStream, err := coll.Watch(context.TODO(), mongo.Pipeline{})
+	if err != nil {
+		panic(err)
+	}
+
+	defer logStream.Close(context.TODO())
+
+	for logStream.Next(context.TODO()) {
+		var data bson.M
+		if err := logStream.Decode(&data); err != nil {
+			panic(err)
+		}
+		fmt.Println("data", data)
+		err = ws.WriteJSON(data)
+		if err != nil {
+			fmt.Errorf(err.Error())
+		}
 	}
 }
 
@@ -149,6 +177,22 @@ func DeleteMany(collection string, filter bson.D) error {
 }
 
 func FindOne(collection string, filter bson.D, doc interface{}) error {
+	clientOptions := options.Client().ApplyURI(viper.GetString("mongodb_uri"))
+	client, err := mongo.Connect(context.TODO(), clientOptions)
+	logger.HandleErr(err)
+	coll := client.Database("opsilon").Collection(collection)
+	// filter := bson.D{{"name", "Bagels N Buns"}}
+	err = coll.FindOne(context.TODO(), filter).Decode(&doc)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			// This error means your query did not match any documents.
+			return err
+		}
+		return err
+	}
+	return nil
+}
+func FindOneWorkflow(collection string, filter bson.D, doc internaltypes.Workflow) error {
 	clientOptions := options.Client().ApplyURI(viper.GetString("mongodb_uri"))
 	client, err := mongo.Connect(context.TODO(), clientOptions)
 	logger.HandleErr(err)
