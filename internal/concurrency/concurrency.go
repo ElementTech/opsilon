@@ -37,18 +37,18 @@ func workflowToGraph(g *depgraph.Graph, w internaltypes.Workflow) {
 	}
 }
 
-func runStageGroupDocker(wg *sync.WaitGroup, stageIDs []string, cli *client.Client, ctx context.Context, w internaltypes.Workflow, allOutputs map[string][]internaltypes.Env, skippedStages *[]string, results chan internaltypes.Result) {
+func runStageGroupDocker(wg *sync.WaitGroup, stageIDs []string, cli *client.Client, ctx context.Context, w internaltypes.Workflow, allOutputs map[string][]internaltypes.Env, skippedStages *[]string, results chan internaltypes.Result, runid string) {
 	for _, id := range stageIDs {
-		go engine.Engine(cli, ctx, w, id, allOutputs, wg, skippedStages, results)
+		go engine.Engine(cli, ctx, w, id, allOutputs, wg, skippedStages, results, runid)
 	}
 }
 
 // cli, wg, layer, cli, ctx, w, vol, allOutputs, &skippedStages
 // func runStageGroupKubernetes(cli *kubengine.Client, wg *sync.WaitGroup, stageIDs []string, ctx context.Context, w internaltypes.Workflow, vol string, claim *v1.PersistentVolumeClaim, allOutputs map[string][]internaltypes.Env, skippedStages *[]string, results chan internaltypes.Result) {
-func runStageGroupKubernetes(cli *kubengine.Client, wg *sync.WaitGroup, stageIDs []string, ctx context.Context, w internaltypes.Workflow, allOutputs map[string][]internaltypes.Env, skippedStages *[]string, results chan internaltypes.Result) {
+func runStageGroupKubernetes(cli *kubengine.Client, wg *sync.WaitGroup, stageIDs []string, ctx context.Context, w internaltypes.Workflow, allOutputs map[string][]internaltypes.Env, skippedStages *[]string, results chan internaltypes.Result, runid string) {
 	for _, id := range stageIDs {
 		// go cli.KubeEngine(wg, id, ctx, w, vol, claim, allOutputs, skippedStages, results)
-		go cli.KubeEngine(wg, id, ctx, w, allOutputs, skippedStages, results)
+		go cli.KubeEngine(wg, id, ctx, w, allOutputs, skippedStages, results, runid)
 	}
 }
 
@@ -61,6 +61,33 @@ func ToGraph(w internaltypes.Workflow, c echo.Context, slacker internaltypes.Sla
 	resultsArray := []internaltypes.Result{}
 	u, err := uuid.NewUUID()
 	logger.HandleErr(err)
+
+	if viper.GetBool("database") {
+		tempW := w
+		tempW.Input = []internaltypes.Input{}
+		hash, err := hashstructure.Hash(tempW, hashstructure.FormatV2, nil)
+		strHash := fmt.Sprint(hash)
+		logger.HandleErr(err)
+		ticker := time.NewTicker(1 * time.Second)
+		tickerTime := 0
+		quit := make(chan struct{})
+		go func() {
+			for {
+				select {
+				case <-ticker.C:
+					go db.InsertOne("logs", internaltypes.RunLog{Log: fmt.Sprint(tickerTime), Stage: "system", RunID: fmt.Sprint(u), Workflow: strHash, CreatedDate: time.Now(), UpdatedDate: time.Now()})
+					tickerTime += 1
+				case <-quit:
+					go db.InsertOne("logs", internaltypes.RunLog{Log: "done", Stage: "system", RunID: fmt.Sprint(u), Workflow: strHash, CreatedDate: time.Now(), UpdatedDate: time.Now()})
+					ticker.Stop()
+					return
+				}
+			}
+		}()
+		defer close(quit)
+
+	}
+
 	if !k8s {
 		cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 		logger.HandleErr(err)
@@ -83,7 +110,7 @@ func ToGraph(w internaltypes.Workflow, c echo.Context, slacker internaltypes.Sla
 				fmt.Printf("Running in Parallel: %s\n", strings.Join(layer, ", "))
 				wg.Add(len(layer))
 				go processResults(&results, &resultsArray, c, w, slacker, u)
-				go runStageGroupDocker(wg, layer, cli, ctx, w, allOutputs, &skippedStages, results)
+				go runStageGroupDocker(wg, layer, cli, ctx, w, allOutputs, &skippedStages, results, fmt.Sprint(u))
 				wg.Wait()
 			}
 		}
@@ -104,7 +131,7 @@ func ToGraph(w internaltypes.Workflow, c echo.Context, slacker internaltypes.Sla
 
 				go processResults(&results, &resultsArray, c, w, slacker, u)
 				// go runStageGroupKubernetes(cli, wg, layer, ctx, w, vol, claim, allOutputs, &skippedStages, results)
-				go runStageGroupKubernetes(cli, wg, layer, ctx, w, allOutputs, &skippedStages, results)
+				go runStageGroupKubernetes(cli, wg, layer, ctx, w, allOutputs, &skippedStages, results, fmt.Sprint(u))
 				wg.Wait()
 			}
 		}

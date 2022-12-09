@@ -7,6 +7,20 @@ import (
 	"github.com/slack-go/slack"
 )
 
+type WorkflowQuery struct {
+	Name string
+	Repo string
+}
+
+type RunLog struct {
+	RunID       string
+	Log         string
+	Stage       string
+	Workflow    string
+	CreatedDate time.Time
+	UpdatedDate time.Time
+}
+
 type Result struct {
 	_id         string
 	RunID       string

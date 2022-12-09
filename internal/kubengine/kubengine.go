@@ -21,6 +21,7 @@ import (
 	"github.com/jatalocks/opsilon/internal/engine"
 	"github.com/jatalocks/opsilon/internal/internaltypes"
 	"github.com/jatalocks/opsilon/internal/logger"
+	"github.com/mitchellh/hashstructure/v2"
 	"golang.org/x/exp/slices"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -310,14 +311,21 @@ func toPodName(stage internaltypes.Stage) string {
 }
 
 // func (cli *Client) KubeEngine(wg *sync.WaitGroup, sID string, ctx context.Context, w internaltypes.Workflow, vol string, claim *v1.PersistentVolumeClaim, allOutputs map[string][]internaltypes.Env, skippedStages *[]string, results chan internaltypes.Result) {
-func (cli *Client) KubeEngine(wg *sync.WaitGroup, sID string, ctx context.Context, w internaltypes.Workflow, allOutputs map[string][]internaltypes.Env, skippedStages *[]string, results chan internaltypes.Result) {
+func (cli *Client) KubeEngine(wg *sync.WaitGroup, sID string, ctx context.Context, w internaltypes.Workflow, allOutputs map[string][]internaltypes.Env, skippedStages *[]string, results chan internaltypes.Result, runid string) {
 	defer wg.Done()
 	idx := slices.IndexFunc(w.Stages, func(c internaltypes.Stage) bool { return c.ID == sID })
 	stage := w.Stages[idx]
 	result := internaltypes.Result{Stage: stage}
 	// volOutput, claimOutput := cli.CreateVolume(ctx, false)
 	// defer cli.RemoveVolume(ctx, volOutput, claimOutput)
-	allEnvs, needSplit, LwWhite, LwCrossed, LwRed := engine.PrepareStage(w.Env, stage.Env, w.Input, stage.Needs, allOutputs, stage.Stage, stage.ID, &result)
+
+	tempW := w
+	tempW.Input = []internaltypes.Input{}
+	hash, err := hashstructure.Hash(tempW, hashstructure.FormatV2, nil)
+	strHash := fmt.Sprint(hash)
+	logger.HandleErr(err)
+
+	allEnvs, needSplit, LwWhite, LwCrossed, LwRed := engine.PrepareStage(w.Env, stage.Env, w.Input, stage.Needs, allOutputs, stage.Stage, stage.ID, &result, runid, strHash)
 
 	if !engine.EvaluateCondition(stage.If, allEnvs, LwWhite) {
 		*skippedStages = append(*skippedStages, stage.ID)
