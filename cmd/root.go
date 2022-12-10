@@ -73,8 +73,10 @@ func initConfig() {
 	logger.HandleErr(err)
 	if consul {
 		consul_uri, err := rootCmd.Flags().GetString("consul_uri")
+		viper.Set("consul_uri", consul_uri)
 		logger.HandleErr(err)
 		consul_key, err := rootCmd.Flags().GetString("consul_key")
+		viper.Set("consul_key", consul_key)
 		logger.HandleErr(err)
 		viper.AddRemoteProvider("consul", consul_uri, consul_key)
 		viper.SetConfigType("yaml") // Need to explicitly set this to yaml
@@ -123,6 +125,7 @@ func initConfig() {
 	viper.BindPFlag("consul", rootCmd.Flags().Lookup("consul"))
 	viper.BindPFlag("mongodb_uri", rootCmd.Flags().Lookup("mongodb_uri"))
 	viper.BindPFlag("consul_uri", rootCmd.Flags().Lookup("consul_uri"))
+	viper.BindPFlag("consul_key", rootCmd.Flags().Lookup("consul_key"))
 
 	if err != nil {
 		logger.Error("It seems that you don't yet have a repository config file. Please run:")

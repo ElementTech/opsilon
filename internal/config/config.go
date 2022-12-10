@@ -139,7 +139,11 @@ func GetConfigFile() *RepoFile {
 
 func SaveToConfig(r RepoFile) {
 	if viper.GetBool("consul") {
-		client, err := api.NewClient(api.DefaultConfig())
+		consul_uri := viper.GetString("consul_uri")
+		consul_key := viper.GetString("consul_key")
+		client, err := api.NewClient(&api.Config{
+			Address: consul_uri,
+		})
 		if err != nil {
 			panic(err)
 		}
@@ -149,7 +153,7 @@ func SaveToConfig(r RepoFile) {
 		out, err := yaml.Marshal(r)
 		logger.HandleErr(err)
 		// PUT a new KV pair
-		p := &api.KVPair{Key: "OPSILON", Value: out}
+		p := &api.KVPair{Key: consul_key, Value: out}
 		_, err = kv.Put(p, nil)
 		logger.HandleErr(err)
 	} else {
