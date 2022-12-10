@@ -246,6 +246,7 @@ func getHistory(workflow, repo string) (error, []internaltypes.RunResult) {
 		if !slices.Contains(runIDS, d.RunID) {
 			runIDS = append(runIDS, d.RunID)
 			groupedDocs = append(groupedDocs, internaltypes.RunResult{
+				Outputs: d.Outputs,
 				SkippedStages: func() uint32 {
 					if d.Skipped {
 						return 1
@@ -285,6 +286,7 @@ func getHistory(workflow, repo string) (error, []internaltypes.RunResult) {
 			for i, g := range groupedDocs {
 				if g.RunID == d.RunID {
 					p := &groupedDocs[i]
+					p.Outputs = append(p.Outputs, d.Outputs...)
 					p.Logs = append(p.Logs, d.Logs...)
 					p.RunTime += time.Duration(d.UpdatedDate.Sub(d.CreatedDate).Seconds())
 					p.StartTime = func() time.Time {

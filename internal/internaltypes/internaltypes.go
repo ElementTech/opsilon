@@ -40,6 +40,7 @@ type RunResult struct {
 	SuccessfulStages uint32
 	Workflow         string
 	RunID            string
+	Outputs          []Env
 	Logs             []string
 	Result           bool
 	RunTime          time.Duration
