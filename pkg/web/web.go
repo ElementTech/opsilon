@@ -381,7 +381,7 @@ func rgdelete(c echo.Context) error {
 
 func rrdelete(c echo.Context) error {
 	run := c.Param("run")
-	err := db.DeleteOne("results", bson.D{{Key: "runid", Value: run}})
+	err := db.DeleteMany("results", bson.D{{Key: "runid", Value: run}})
 	if err != nil {
 		return c.String(http.StatusInternalServerError, err.Error())
 	} else {
