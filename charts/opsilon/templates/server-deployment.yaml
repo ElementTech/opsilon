@@ -72,7 +72,7 @@ spec:
           image: "{{ .Values.server.image.repository }}:{{ .Values.server.image.tag }}"
           imagePullPolicy: {{ .Values.server.image.pullPolicy }}
           workingDir: /cache
-          command: ["opsilon","server"]
+          command: ["/opsilon","server"]
           args: [
             "--consul",
             "--database",
