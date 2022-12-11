@@ -171,7 +171,8 @@ func (c *Client) CreatePod(ctx context.Context, name string, image string, s int
 	// 		VolumeSource: v1.VolumeSource{PersistentVolumeClaim: &v1.PersistentVolumeClaimVolumeSource{ClaimName: claim.Name}},
 	// 	})
 	// } else {
-	mountApp := os.TempDir()
+	mountApp, err := os.MkdirTemp("", "app")
+	logger.HandleErr(err)
 	defer os.RemoveAll(mountApp)
 	engine.LoadImportsIntoStage(s, mountApp, runid, w)
 
@@ -218,7 +219,7 @@ func (c *Client) CreatePod(ctx context.Context, name string, image string, s int
 		},
 	}
 
-	_, err := c.k8s.CoreV1().
+	_, err = c.k8s.CoreV1().
 		Pods(c.ns).
 		Create(ctx, pod, metav1.CreateOptions{})
 
