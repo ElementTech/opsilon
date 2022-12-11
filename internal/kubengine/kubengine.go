@@ -157,7 +157,7 @@ func (c *Client) RemoveVolume(ctx context.Context, vol string, claim *v1.Persist
 }
 
 // func (c *Client) CreatePod(ctx context.Context, name string, image string, command []string, envs []internaltypes.Env, volume string, claim *v1.PersistentVolumeClaim) (error, v1.Pod) {
-func (c *Client) CreatePod(ctx context.Context, name string, image string, s internaltypes.Stage, envs []internaltypes.Env) (error, v1.Pod) {
+func (c *Client) CreatePod(ctx context.Context, name string, image string, s internaltypes.Stage, envs []internaltypes.Env, runid string, w internaltypes.Workflow) (error, v1.Pod) {
 	envVar := ToV1Env(envs)
 	VolumeMounts := []v1.VolumeMount{{Name: "emptyoutput", MountPath: "/output"}}
 	Volumes := []v1.Volume{{
@@ -173,7 +173,7 @@ func (c *Client) CreatePod(ctx context.Context, name string, image string, s int
 	// } else {
 	mountApp := os.TempDir()
 	defer os.RemoveAll(mountApp)
-	engine.LoadImportsIntoStage(s, mountApp)
+	engine.LoadImportsIntoStage(s, mountApp, runid, w)
 
 	VolumeMounts = append(VolumeMounts, v1.VolumeMount{Name: "emptydir", MountPath: "/app"})
 	Volumes = append(Volumes, v1.Volume{
@@ -354,7 +354,7 @@ func (cli *Client) KubeEngine(wg *sync.WaitGroup, sID string, ctx context.Contex
 			// 	success := cli.RunStageKubernetes(stage, ctx, allEnvs, w.Image, vol, claim, LwWhite, &result, allOutputs, LwRed)
 			// 	result.Result = success
 			// }
-			cli.RunStageKubernetes(stage, ctx, allEnvs, w.Image, LwWhite, &result, allOutputs, LwRed)
+			cli.RunStageKubernetes(stage, ctx, allEnvs, w.Image, LwWhite, &result, allOutputs, LwRed, w, runid)
 		}
 
 	}
@@ -467,7 +467,7 @@ func (c *Client) getPodLogs(ctx context.Context, podName string, LwWhite *logger
 }
 
 // func (cli *Client) RunStageKubernetes(s internaltypes.Stage, ctx context.Context, envs []internaltypes.Env, globalImage string, volume string, claim *v1.PersistentVolumeClaim, LwWhite *logger.MyLogWriter, result *internaltypes.Result, allOutputs map[string][]internaltypes.Env, LwRed *logger.MyLogWriter) bool {
-func (cli *Client) RunStageKubernetes(s internaltypes.Stage, ctx context.Context, envs []internaltypes.Env, globalImage string, LwWhite *logger.MyLogWriter, result *internaltypes.Result, allOutputs map[string][]internaltypes.Env, LwRed *logger.MyLogWriter) {
+func (cli *Client) RunStageKubernetes(s internaltypes.Stage, ctx context.Context, envs []internaltypes.Env, globalImage string, LwWhite *logger.MyLogWriter, result *internaltypes.Result, allOutputs map[string][]internaltypes.Env, LwRed *logger.MyLogWriter, w internaltypes.Workflow, runid string) {
 	LwWhite.Write([]byte(fmt.Sprintf("Running Stage with the following variables: %s\n", engine.GenEnv(envs))))
 	envs = append(envs, []internaltypes.Env{{Name: "OUTPUT", Value: "/output/output"}}...)
 	if s.Image != "" {
@@ -481,6 +481,8 @@ func (cli *Client) RunStageKubernetes(s internaltypes.Stage, ctx context.Context
 		globalImage,
 		s,
 		envs,
+		runid,
+		w,
 		// volume,
 		// claim,
 	)
@@ -512,7 +514,7 @@ func (cli *Client) RunStageKubernetes(s internaltypes.Stage, ctx context.Context
 		if err != nil {
 			logger.Error(err.Error())
 		}
-		engine.ExtractArtifacts(path.Join(dirArt, "app"), s)
+		engine.ExtractArtifacts(path.Join(dirArt, "app"), s, runid, w)
 	}
 	err = copyFromPod(cli, "/output", dirArt, podName)
 	if err != nil {

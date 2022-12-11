@@ -154,11 +154,11 @@ func Copy(src, dst string) error {
 		return err
 	})
 }
-func LoadImportsIntoStage(s internaltypes.Stage, targetDir string) {
+func LoadImportsIntoStage(s internaltypes.Stage, targetDir, runid string, w internaltypes.Workflow) {
 	current, _ := os.Getwd()
 	for _, v := range s.Import {
 		for _, a := range v.Artifacts {
-			from := filepath.Join(current, v.From, a)
+			from := filepath.Join(current, "artifacts", w.Repo, w.ID, runid, v.From, a)
 			to := filepath.Join(targetDir, a)
 			fmt.Println("Copying", from, "To", to)
 			err := Copy(from, to)
@@ -169,7 +169,7 @@ func LoadImportsIntoStage(s internaltypes.Stage, targetDir string) {
 	}
 }
 
-func RunStage(s internaltypes.Stage, ctx context.Context, cli *client.Client, envs []internaltypes.Env, globalImage string, volume types.Volume, dir string, volumeOutput types.Volume, dirOutput string, LwWhite *logger.MyLogWriter, LwRed *logger.MyLogWriter) bool {
+func RunStage(s internaltypes.Stage, ctx context.Context, cli *client.Client, envs []internaltypes.Env, globalImage string, volume types.Volume, dir string, volumeOutput types.Volume, dirOutput string, LwWhite *logger.MyLogWriter, LwRed *logger.MyLogWriter, runid string, w internaltypes.Workflow) bool {
 	PullImage(s.Image, ctx, cli)
 	if s.Image != "" {
 		globalImage = s.Image
@@ -192,7 +192,7 @@ func RunStage(s internaltypes.Stage, ctx context.Context, cli *client.Client, en
 		Target: "/output",
 	})
 	// }
-	LoadImportsIntoStage(s, dir)
+	LoadImportsIntoStage(s, dir, runid, w)
 
 	hostConfig.Mounts = mounts
 	allEnvs := GenEnv(envs)
@@ -207,7 +207,7 @@ func RunStage(s internaltypes.Stage, ctx context.Context, cli *client.Client, en
 	}, &hostConfig, nil, nil, "")
 	logger.HandleErr(err)
 
-	defer ExtractArtifacts(dir, s)
+	defer ExtractArtifacts(dir, s, runid, w)
 	defer ContainerClean(resp.ID, ctx, cli)
 
 	if err := cli.ContainerStart(ctx, resp.ID, types.ContainerStartOptions{}); err != nil {
@@ -366,7 +366,7 @@ func Engine(cli *client.Client, ctx context.Context, w internaltypes.Workflow, s
 			LwCrossed.Println("Stage Skipped due to needed stage skipped")
 		} else {
 			vol, dir := CreateVolume(cli, ctx)
-			success := RunStage(stage, ctx, cli, allEnvs, w.Image, vol, dir, volOutput, dirOutput, LwWhite, LwRed)
+			success := RunStage(stage, ctx, cli, allEnvs, w.Image, vol, dir, volOutput, dirOutput, LwWhite, LwRed, runid, w)
 			result.Result = success
 		}
 
@@ -447,7 +447,7 @@ func EvaluateCondition(condition string, availableValues []internaltypes.Env, Lw
 	return true
 }
 
-func ExtractArtifacts(path string, s internaltypes.Stage) {
+func ExtractArtifacts(path string, s internaltypes.Stage, runid string, w internaltypes.Workflow) {
 	white := color.New(color.FgWhite).SprintFunc()
 
 	LwOperation := log.New(logger.NewLogWriter(func(str string, col color.Attribute) {
@@ -466,7 +466,8 @@ func ExtractArtifacts(path string, s internaltypes.Stage) {
 	for _, v := range s.Artifacts {
 		fullPath := filepath.Join(path, v)
 		current, _ := os.Getwd()
-		to := filepath.Join(current, s.ID, v)
+		to := filepath.Join(current, "artifacts", w.Repo, w.ID, runid, s.ID, v)
+		os.MkdirAll(filepath.Join(current, "artifacts", w.Repo, w.ID, runid, s.ID), 0755)
 		LwOperation.Println("Copying", v, "To", to)
 		err := Copy(fullPath, to)
 		if err != nil {
