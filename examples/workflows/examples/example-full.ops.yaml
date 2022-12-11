@@ -90,6 +90,7 @@ stages:
         ls -l -a
     artifacts:
       - testdir3 # Copies files inside it.
+      - testdir1
   - stage: read the file
     id: readfile
     needs: writefile3 # Comma Separated list of stage IDs

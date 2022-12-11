@@ -1,5 +1,6 @@
 /.idea
 test*/
+artifacts
 # Binaries for programs and plugins
 *.exe
 *.exe~
