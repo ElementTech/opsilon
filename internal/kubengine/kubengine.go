@@ -157,7 +157,7 @@ func (c *Client) RemoveVolume(ctx context.Context, vol string, claim *v1.Persist
 }
 
 // func (c *Client) CreatePod(ctx context.Context, name string, image string, command []string, envs []internaltypes.Env, volume string, claim *v1.PersistentVolumeClaim) (error, v1.Pod) {
-func (c *Client) CreatePod(ctx context.Context, name string, image string, s internaltypes.Stage, envs []internaltypes.Env, runid string, w internaltypes.Workflow) (error, v1.Pod) {
+func (c *Client) CreatePod(ctx context.Context, name string, image string, s internaltypes.Stage, envs []internaltypes.Env, runid string, w internaltypes.Workflow, LwWhite *logger.MyLogWriter) (error, v1.Pod) {
 	envVar := ToV1Env(envs)
 	VolumeMounts := []v1.VolumeMount{{Name: "emptyoutput", MountPath: "/output"}}
 	Volumes := []v1.Volume{{
@@ -174,7 +174,6 @@ func (c *Client) CreatePod(ctx context.Context, name string, image string, s int
 	mountApp, err := os.MkdirTemp("", "app")
 	logger.HandleErr(err)
 	defer os.RemoveAll(mountApp)
-	engine.LoadImportsIntoStage(s, mountApp, runid, w)
 
 	VolumeMounts = append(VolumeMounts, v1.VolumeMount{Name: "emptydir", MountPath: "/app"})
 	Volumes = append(Volumes, v1.Volume{
@@ -183,6 +182,50 @@ func (c *Client) CreatePod(ctx context.Context, name string, image string, s int
 			Path: mountApp,
 		}},
 	})
+
+	if len(s.Import) > 0 {
+		pod := &v1.Pod{
+			ObjectMeta: metav1.ObjectMeta{Name: name + "-loader"},
+			Spec: v1.PodSpec{
+				RestartPolicy: v1.RestartPolicyNever,
+				Volumes:       Volumes,
+				Containers: []v1.Container{
+					v1.Container{
+						Name:         "keepalive",
+						Image:        "busybox",
+						WorkingDir:   "/app",
+						Command:      []string{"/bin/sh", "-c", "sleep 60"},
+						VolumeMounts: VolumeMounts,
+					},
+				},
+			},
+		}
+
+		_, err = c.k8s.CoreV1().
+			Pods(c.ns).
+			Create(ctx, pod, metav1.CreateOptions{})
+		current, _ := os.Getwd()
+		err := c.waitPod(ctx, name+"-loader", LwWhite, "Terminated")
+		logger.HandleErr(err)
+		for _, v := range s.Import {
+			for _, a := range v.Artifacts {
+				from := filepath.Join(current, "artifacts", w.Repo, w.ID, runid, v.From, a)
+				to := filepath.Join("/app")
+				fmt.Println("Copying", from, "To", to)
+				copyToPod(c, from, to, name+"-loader", ctx)
+				if err != nil {
+					fmt.Println(err)
+				}
+			}
+		}
+
+		defer func(cli *Client, podName string) {
+			go cli.DeletePod(ctx, podName)
+		}(c, name+"-loader")
+	}
+
+	// engine.LoadImportsIntoStage(s, mountApp, runid, w)
+
 	// }
 
 	// if volumeOutput != "" {
@@ -484,6 +527,7 @@ func (cli *Client) RunStageKubernetes(s internaltypes.Stage, ctx context.Context
 		envs,
 		runid,
 		w,
+		LwWhite,
 		// volume,
 		// claim,
 	)
