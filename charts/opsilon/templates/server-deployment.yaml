@@ -32,9 +32,15 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}    
       restartPolicy: Always
+      volumes:
+      - name: cache-volume
+        emptyDir: {}        
       containers:
         {{- if (eq .Values.server.slackMode true) }}
-        - name: slack    
+        - name: slack  
+          volumeMounts:
+          - mountPath: /artifacts
+            name: cache-volume                  
           image: "{{ .Values.server.image.repository }}:{{ .Values.server.image.tag }}"
           imagePullPolicy: {{ .Values.server.image.pullPolicy }}
           command: ["./opsilon","server"]
@@ -63,6 +69,9 @@ spec:
 {{ toYaml .Values.server.resources | indent 12 }}          
         {{- end }} 
         - name: {{ .Chart.Name }}
+          volumeMounts:
+          - mountPath: /artifacts
+            name: cache-volume         
           image: "{{ .Values.server.image.repository }}:{{ .Values.server.image.tag }}"
           imagePullPolicy: {{ .Values.server.image.pullPolicy }}
           command: ["./opsilon","server"]

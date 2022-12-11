@@ -28,10 +28,10 @@ This project serves the purpose of giving developers, operations and other perso
 # Download
 ### Quickstart
 
-Download the [latest release](https://github.com/jatalocks/opsilon/releases/latest) for your os: (this example uses version `v0.5.3`).
+Download the [latest release](https://github.com/jatalocks/opsilon/releases/latest) for your os: (this example uses version `v0.5.4`).
 For Mac:
 ```bash
-$ curl -L https://github.com/jatalocks/opsilon/releases/download/v0.5.3-alpha/opsilon_0.5.3-alpha_Darwin_x86_64.tar.gz \
+$ curl -L https://github.com/jatalocks/opsilon/releases/download/v0.5.4-alpha/opsilon_0.5.4-alpha_Darwin_x86_64.tar.gz \
  | tar -xz opsilon | chmod u+x opsilon
 ```
 Test if the Opsilon CLI works: *(When it doesn't work, you may have downloaded the wrong file or your device/os isn't supported)*
